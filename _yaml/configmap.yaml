@@ -3,49 +3,24 @@ kind: ConfigMap
 metadata:
   name: configurj-settings
   namespace: configurj
-  annotations:
-    configurj.jnnkrdb.de/active: "true"
-    configurj.jnnkrdb.de/state: "replica"
-    configurj.jnnkrdb.de/avoid: "default;kube-system"
-    configurj.jnnkrdb.de/match: "configurj"
 data:
   settings.json: |
     {
       "immutablereplicas":true,
-      "liveness":"8080",
+      "healthport":"8080",
       "sourcenamespace":"global-configs",
       "avoidsecrets":[
-        "argocd",
-        "configurj",
         "default",
-        "elastic-system",
         "global-resources",
-        "grafana",
-        "infra",
         "kube-node-lease",
         "kube-public",
-        "kube-system",
-        "kubernetes-dashboard",
-        "prometheus",
-        "storage-nfs-ceph",
-        "storage-rbd-ceph",
-        "vaultwarden"
+        "kube-system"
       ],
       "avoidconfigmaps":[
-        "argocd",
-        "configurj",
         "default",
-        "elastic-system",
         "global-resources",
-        "grafana",
-        "infra",
         "kube-node-lease",
         "kube-public",
-        "kube-system",
-        "kubernetes-dashboard",
-        "prometheus",
-        "storage-nfs-ceph",
-        "storage-rbd-ceph",
-        "vaultwarden"
+        "kube-system"
       ]
     }

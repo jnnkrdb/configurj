@@ -17,10 +17,8 @@ spec:
       serviceAccountName: configurj-sa
       containers:
       - name: configurj-controller
-        image: mugennoxaxa/configurj:v3-stable
+        image: docker.io/jnnkrdb/configurj:v1-stable
         imagePullPolicy: Always
-        securityContext:
-          runAsUser: 0
         resources:
           limits:
             memory: "128Mi"
@@ -28,6 +26,14 @@ spec:
           requests:
             memory: "64Mi"
             cpu: "250m"
+        livenessProbe:
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          httpGet:
+            path: /livez
+            # the port will be configured in the configmap -> settings.json
+            port: 8080
+          failureThreshold: 10
         volumeMounts:
           - name: settings
             mountPath: /configs

@@ -108,25 +108,17 @@ func InitSecretHandler(_avoidns []string) {
 
 				} else {
 
-					// immutable secrets will be ignored
-					if *currsecret.Immutable {
+					if secret.ResourceVersion != strings.Split(currsecret.Annotations[ANNOTATION_ORIGINAL], ";")[1] {
 
-						__LOG.Printf("%s | %s\n", "INFO", "Secret["+currsecret.Namespace+"/"+currsecret.Name+"] is immutable and will be ignored.")
+						if currsecret.Annotations[ANNOTATION_REPLICA] == "true" {
 
-					} else {
+							if err := __K8SCLIENT.CoreV1().Secrets(namespace).Delete(context.TODO(), currsecret.Name, metav1.DeleteOptions{}); err != nil {
 
-						if secret.ResourceVersion != strings.Split(currsecret.Annotations[ANNOTATION_ORIGINAL], ";")[1] {
+								__LOG.Printf("%s | %s\n", "ERROR", err.Error())
 
-							if currsecret.Annotations[ANNOTATION_REPLICA] == "true" {
+							} else {
 
-								if err := __K8SCLIENT.CoreV1().Secrets(namespace).Delete(context.TODO(), currsecret.Name, metav1.DeleteOptions{}); err != nil {
-
-									__LOG.Printf("%s | %s\n", "ERROR", err.Error())
-
-								} else {
-
-									createSecret(secret, namespace)
-								}
+								createSecret(secret, namespace)
 							}
 						}
 					}

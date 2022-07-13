@@ -109,25 +109,17 @@ func InitConfigMapHandler(_sourcens string, _k8sclient *kubernetes.Clientset, _l
 
 				} else {
 
-					// immutable configmaps will be ignored
-					if *currconfigmap.Immutable {
+					if configmap.ResourceVersion != currconfigmap.Annotations[ANNOTATION_ORIGINAL_RV] {
 
-						__LOG.Printf("%s | %s\n", "INFO", "ConfigMap["+currconfigmap.Namespace+"/"+currconfigmap.Name+"] is immutable and will be ignored.")
+						if currconfigmap.Annotations[ANNOTATION_REPLICA] == "true" {
 
-					} else {
+							if err := __K8SCLIENT.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), currconfigmap.Name, metav1.DeleteOptions{}); err != nil {
 
-						if configmap.ResourceVersion != currconfigmap.Annotations[ANNOTATION_ORIGINAL_RV] {
+								__LOG.Printf("%s | %s\n", "ERROR", err.Error())
 
-							if currconfigmap.Annotations[ANNOTATION_REPLICA] == "true" {
+							} else {
 
-								if err := __K8SCLIENT.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), currconfigmap.Name, metav1.DeleteOptions{}); err != nil {
-
-									__LOG.Printf("%s | %s\n", "ERROR", err.Error())
-
-								} else {
-
-									createConfigMap(configmap, namespace)
-								}
+								createConfigMap(configmap, namespace)
 							}
 						}
 					}

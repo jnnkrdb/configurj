@@ -3,11 +3,11 @@ kind: ClusterRole
 metadata:
   name: cr-configurj
 rules:
-  # List Namespaces
+  # Get/List Namespaces
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["list", "get"]
-  # Get/Create/Patch/Delete Conigmaps and Secrets
+  # Get/Create/List/Delete Conigmaps and Secrets
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
     verbs: ["list", "get", "create", "delete"]
