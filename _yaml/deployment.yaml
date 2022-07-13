@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configurj
+  namespace: configurj
+  labels:
+    app: configurj
+spec:
+  selector:
+    matchLabels:
+      app: configurj
+  template:
+    metadata:
+      labels:
+        app: configurj
+    spec:
+      serviceAccountName: configurj-sa
+      containers:
+      - name: configurj-controller
+        image: mugennoxaxa/configurj:v3-stable
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+        volumeMounts:
+          - name: settings
+            mountPath: /configs
+            readOnly: true
+      volumes:
+        - name: settings
+          configMap:
+            name: configurj-settings
