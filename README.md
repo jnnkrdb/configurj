@@ -152,15 +152,11 @@ spec:
 
 This is the necessary content for the settings.json. 
 
-`immutablereplicas`
-This is a bool-value, which determines, if the replicas will be immutable or not.
-`healthport` 
-This is a string-value, which determines the port for the readyness and liveness probes.
-`sourcenamespace`
-This is a string-value, which determines the namespace, that the operator will collect the object (Secrets, ConfigMaps) from.
-`avoidsecrets/avoidconfigmaps`
-These are string-value collections of the namespaces in the cluster, that will be avoided 
-in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
+`immutablereplicas` is a bool-value, which determines, if the replicas will be immutable or not. `healthport` 
+is a string-value, which determines the port for the readyness and liveness probes. `sourcenamespace` is a 
+string-value, which determines the namespace, that the operator will collect the object (Secrets, ConfigMaps) 
+from. `avoidsecrets/avoidconfigmaps` are string-value collections of the namespaces in the cluster, that will 
+be avoided in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
 
 ```json
 {
