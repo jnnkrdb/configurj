@@ -3,6 +3,10 @@ ConfiguRJ is a Kubernetes Operator, that creates and updates Secrets and ConfigM
 It is used, to copy one or more Secrets/ConfigMaps from one Namespace to another Namespace and keep 
 the resources updated. 
 
+[![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://go.dev/)
+[![GitHub](https://badgen.net/badge/icon/github?icon=github&label)](https://github.com/jnnkrdb/configurj)
+[![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://hub.docker.com/r/jnnkrdb/configurj)
+
 ## Table of Contents
 
 - [Installation](#installation)
@@ -34,7 +38,7 @@ The manifests are minimalistic and do only contain the minimum neccessary inform
 - Deployment
   
 #### Namespace
-```
+```yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -42,7 +46,7 @@ metadata:
 ---
 ```  
 #### ServiceAccount
-```
+```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -51,7 +55,7 @@ metadata:
 ---
 ```  
 #### ClusterRole
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -68,7 +72,7 @@ rules:
 ---
 ```  
 #### ClusterRoleBinding
-```
+```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -84,7 +88,7 @@ subjects:
 ---
 ```  
 #### ConfigMap
-```
+```yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -96,7 +100,7 @@ data:
 ---
 ```  
 #### Deployment  
-```
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -148,25 +152,17 @@ spec:
 
 This is the necessary content for the settings.json. 
 
-#### immutablereplicas
+**immutablereplicas**
+This is a bool-value, which determines, if the replicas will be immutable or not.
+**healthport** 
+This is a string-value, which determines the port for the readyness and liveness probes.
+**sourcenamespace** 
+This is a string-value, which determines the namespace, that the operator will collect the object (Secrets, ConfigMaps) from.
+**avoidsecrets/avoidconfigmaps**
+These are string-value collections of the namespaces in the cluster, that will be avoided 
+in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
 
-    This is a bool-value, which determines, if the replicas will be immutable or not.
-
-#### healthport
-
-    This is a string-value, which determines the port for the readyness and liveness probes.
-
-#### sourcenamespace
-
-    This is a string-value, which determines the namespace, that the operator will collect 
-    the object (Secrets, ConfigMaps) from.
-
-#### avoidsecrets/avoidconfigmaps
-
-    These are string-value collections of the namespaces in the cluster, that will be avoided 
-    in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
-
-```
+```json
 {
     "immutablereplicas":true,
     "healthport":"8080",
@@ -196,20 +192,20 @@ annotations, some are necessary for the service, some give the administrator inf
 
 ### Original Annotations
 
-```
+```yaml
 configurj.jnnkrdb.de/active: "true"/"false"
 ```
 This annotation marks the object, to be replicated. If "true", the object will be replicated, if "false" the 
 object will be removed from the other namespaces. If the annotation doesn't exist, the object will be ignored 
 completly.
 
-```
+```yaml
 configurj.jnnkrdb.de/avoid: "namespace-1;namespace-2"
 ```
 This annotation is a collection of the namespaces, that the object should avoid additionally to the global avoids
 from the settings.json. Seperate the namespaces with ";".
 
-```
+```yaml
 configurj.jnnkrdb.de/match: "namespace-3;namespace-4"
 ```
 This annotation is a collection of the namespaces, that the object should match without the global avoids
@@ -217,29 +213,29 @@ from the settings.json. Seperate the namespaces with ";".
 
 ### Replica Annotations
 
-```
+```yaml
 configurj.jnnkrdb.de/replica: "true"
 ```
 This annotation is set to "true" by default from the service at creation time. It is used as a marker, to declare 
 an item as a replica. If the annotation is removed, the replicated item will be ignored and not be updated or deleted.
 
-```
+```yaml
 configurj.jnnkrdb.de/timestamp: "YYYY/MM/DD"
 ```
 This annotation is an information for the administrator, to see the last time, the item was changed or created.
 The annotation is not necessary for the service to handle the objects.
 
-```
+```yaml
 configurj.jnnkrdb.de/original: "<original-name>"
 ```
 The name of the original resource is stored in this annotation. 
 
-```
+```yaml
 configurj.jnnkrdb.de/original-ns: "<original-namespace>"
 ```
 The namespace of the original resource is stored in this annotation. 
 
-```
+```yaml
 configurj.jnnkrdb.de/original-rv: "<original-resourceversion>"
 ```
 The resourceversion of the original resource is stored in this annotation. If the resourceversion in this annotation differs
