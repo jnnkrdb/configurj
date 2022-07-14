@@ -64,22 +64,19 @@ func StartHealthz(_port string, _log *log.Logger) {
 		Handler: ginrouter,
 	}
 
-	ginrouter.Handle("GET", "/livez", livez)
+	ginrouter.Handle("GET", "/livez", func(ctx *gin.Context) {
+
+		switch LIVENESS {
+		case 200:
+			ctx.String(200, "Liveness: %s", "OK")
+		default:
+			ctx.String(500, "Liveness: %s", "ERROR")
+		}
+	})
 
 	if err := httpserver.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
 		_log.Printf("%s | %s\n", "ERROR", err.Error())
 	}
 
 	_log.Printf("%s | %s\n", "WARNING", "HTTP-Controller stopped working.")
-}
-
-// liveness function for the k8s-cluster
-func livez(c *gin.Context) {
-
-	switch LIVENESS {
-	case 200:
-		c.String(200, "Liveness: %s", "OK")
-	default:
-		c.String(500, "Liveness: %s", "ERROR")
-	}
 }

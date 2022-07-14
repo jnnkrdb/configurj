@@ -86,12 +86,12 @@ func getConfigMaps(_namespace string) ([]v1.ConfigMap, []v1.ConfigMap) {
 }
 
 // Initcommand for ConfigMap Distribution
-func InitConfigMapHandler(_sourcens string, _avoidns []string) {
+func InitConfigMapHandler(_avoidns []string) {
 
 	for {
 
 		// receive relevant configmaps from the source namespace
-		activesc, inactivesc := getConfigMaps(_sourcens)
+		activesc, inactivesc := getConfigMaps(__SOURCENS)
 
 		// handle active configmaps
 		for _, configmap := range activesc {
@@ -132,7 +132,7 @@ func InitConfigMapHandler(_sourcens string, _avoidns []string) {
 
 			for _, namespace := range GetAllNamespaces() {
 
-				if namespace != _sourcens {
+				if namespace != __SOURCENS {
 
 					if err := __K8SCLIENT.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), configmap.Name, metav1.DeleteOptions{}); err != nil {
 

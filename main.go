@@ -90,7 +90,7 @@ func main() {
 				go handler.InitSecretHandler(settings.AvoidSecrets)
 
 				// init configmap handler
-				go handler.InitConfigMapHandler(settings.SourceNS, cs, _LOG, settings.AvoidConfigMaps, settings.ImmutableReplica)
+				go handler.InitConfigMapHandler(settings.AvoidConfigMaps)
 
 				// setting healthstatus to live
 				probes.LIVENESS = 200
