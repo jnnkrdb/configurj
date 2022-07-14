@@ -43,11 +43,11 @@ func ListContainsString(_list []string, _string string) bool {
 // get all required namespaces without the avoided ones
 func AsyncWatchNamespaces(_log *log.Logger, _k8sclient *kubernetes.Clientset) {
 
-	ns_all := &[]string{}
-
 	awaittimer := 60
 
 	for {
+
+		ns_all := &[]string{}
 
 		if allnamespaces, err := _k8sclient.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); err != nil {
 
@@ -64,12 +64,12 @@ func AsyncWatchNamespaces(_log *log.Logger, _k8sclient *kubernetes.Clientset) {
 				*ns_all = append(*ns_all, namespace.Name)
 			}
 
-			__NS_ALL = ns_all
-
 			awaittimer = 60
 
-			probes.LIVENESS = 500
+			probes.LIVENESS = 200
 		}
+
+		__NS_ALL = ns_all
 
 		time.Sleep(time.Duration(int(awaittimer)) * time.Second)
 	}

@@ -2,12 +2,10 @@ package handler
 
 import (
 	"context"
-	"log"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // creates the configmap from a template (_configmap) in the namespace (_namespace)
@@ -88,7 +86,7 @@ func getConfigMaps(_namespace string) ([]v1.ConfigMap, []v1.ConfigMap) {
 }
 
 // Initcommand for ConfigMap Distribution
-func InitConfigMapHandler(_sourcens string, _k8sclient *kubernetes.Clientset, _log *log.Logger, _avoidns []string, _immutablereplicas bool) {
+func InitConfigMapHandler(_sourcens string, _avoidns []string) {
 
 	for {
 
@@ -109,9 +107,9 @@ func InitConfigMapHandler(_sourcens string, _k8sclient *kubernetes.Clientset, _l
 
 				} else {
 
-					if configmap.ResourceVersion != currconfigmap.Annotations[ANNOTATION_ORIGINAL_RV] {
+					if currconfigmap.Annotations[ANNOTATION_REPLICA] == "true" {
 
-						if currconfigmap.Annotations[ANNOTATION_REPLICA] == "true" {
+						if configmap.ResourceVersion != currconfigmap.Annotations[ANNOTATION_ORIGINAL_RV] {
 
 							if err := __K8SCLIENT.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), currconfigmap.Name, metav1.DeleteOptions{}); err != nil {
 

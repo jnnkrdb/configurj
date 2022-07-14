@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -108,9 +107,9 @@ func InitSecretHandler(_avoidns []string) {
 
 				} else {
 
-					if secret.ResourceVersion != strings.Split(currsecret.Annotations[ANNOTATION_ORIGINAL], ";")[1] {
+					if currsecret.Annotations[ANNOTATION_REPLICA] == "true" {
 
-						if currsecret.Annotations[ANNOTATION_REPLICA] == "true" {
+						if secret.ResourceVersion != currsecret.Annotations[ANNOTATION_ORIGINAL_RV] {
 
 							if err := __K8SCLIENT.CoreV1().Secrets(namespace).Delete(context.TODO(), currsecret.Name, metav1.DeleteOptions{}); err != nil {
 
