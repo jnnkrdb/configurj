@@ -205,13 +205,13 @@ completly.
 configurj.jnnkrdb.de/avoid: "namespace-1;namespace-2"
 ```
 This annotation is a collection of the namespaces, that the object should avoid additionally to the global avoids
-from the settings.json. Seperate the namespaces with ";".
+from the settings.json. Seperate the namespaces with ";". Use "*", to avoid all existing namespaces.
 
 ```yaml
 configurj.jnnkrdb.de/match: "namespace-3;namespace-4"
 ```
 This annotation is a collection of the namespaces, that the object should match without the global avoids
-from the settings.json. Seperate the namespaces with ";".
+from the settings.json. Seperate the namespaces with ";". Use "*", to match all existing namespaces.
 
 ### Replica Annotations
 
