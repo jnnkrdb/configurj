@@ -98,7 +98,7 @@ func InitSecretHandler(_avoidns []string) {
 
 			for _, namespace := range GetDistributeNamespaces(_avoidns, secret.Annotations) {
 
-				// get current secret from namespace, if existent -> delete rist and then create
+				// get current secret from namespace, if existent -> delete first and then create
 				if currsecret, err := __K8SCLIENT.CoreV1().Secrets(namespace).Get(context.TODO(), secret.Name, metav1.GetOptions{}); err != nil {
 
 					__LOG.Printf("%s | %s\n", "WARNING", "Namespace["+namespace+"] - "+err.Error())

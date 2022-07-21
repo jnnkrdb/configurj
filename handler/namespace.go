@@ -83,14 +83,14 @@ func GetDistributeNamespaces(_globalavoidnamespaces []string, _annotations map[s
 	// ###########################################################################################################################
 	// get all avoided namespaces for the current secret
 	// if the annotation <configurj.jnnkrdb.de/avoid> is empty, it will
-	// be ignored
+	// be ignored, if the value is '*', all namespace will be avoided (just for completion, has no purpose)
 	totalavoidednamespaces := _globalavoidnamespaces
 
 	if _annotations[ANNOTATION_AVOID] != "" {
 
 		if _annotations[ANNOTATION_AVOID] == "*" {
 
-			totalavoidednamespaces = append(totalavoidednamespaces, currentAllNamespaces...)
+			totalavoidednamespaces = currentAllNamespaces
 
 		} else {
 
@@ -107,14 +107,14 @@ func GetDistributeNamespaces(_globalavoidnamespaces []string, _annotations map[s
 	// ###########################################################################################################################
 	// get all desired namespaces from the secret annotation
 	// if the annotation <configurj.jnnkrdb.de/match> is empty, it will
-	// be ignored, if the value is '*'
+	// be ignored, if the value is '*', all namespace will be matched
 	totaldesirednamespaces := []string{}
 
 	if _annotations[ANNOTATION_MATCH] != "" {
 
 		if _annotations[ANNOTATION_MATCH] == "*" {
 
-			totaldesirednamespaces = append(totaldesirednamespaces, currentAllNamespaces...)
+			totaldesirednamespaces = currentAllNamespaces
 
 		} else {
 

@@ -1,7 +1,7 @@
 # ConfiguRJ
-ConfiguRJ is a Kubernetes Operator, that creates and updates Secrets and ConfigMaps in the cluster.
-It is used, to copy one or more Secrets/ConfigMaps from one Namespace to another Namespace and keep 
-the resources updated. 
+ConfiguRJ is a Kubernetes Operator, that creates and updates Secrets and ConfigMaps 
+in the cluster. It is used, to copy one or more Secrets/ConfigMaps from one Namespace 
+to another Namespace and keep the resources updated. 
 
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://go.dev/)
 [![GitHub](https://badgen.net/badge/icon/github?icon=github&label)](https://github.com/jnnkrdb/configurj)
@@ -23,12 +23,18 @@ the resources updated.
   
 ## Installation
   
-This part is about the installation of the ConfiguRJ service. A collection of the kubernetes manifests and 
-a short explanation about the overall service configuration.
+This part is about the installation of the ConfiguRJ service. A collection of the 
+kubernetes manifests and a short explanation about the overall service configuration. 
+To get this service running, you need to deploy the yaml-files to your kubernetes cluster
+and then create a `<namespace>`, where the secrets and configmaps, you want to distribute to the 
+whole cluster, will be deployed/stored. In the service configmap, that is stated below, you
+have to set the `"sourcenamespace":"<namespace>"` value, to the created namespace, and the service 
+will constantly look for secrets and configmaps with the required annotations.
   
 ### Deploying to Kubernetes
   
 To deploy the service to your cluster, there are the following manifests, which are recommended to run the service.
+
 The manifests are minimalistic and do only contain the minimum neccessary information:
 - Namespace
 - ServiceAccount
