@@ -88,11 +88,18 @@ func GetDistributeNamespaces(_globalavoidnamespaces []string, _annotations map[s
 
 	if _annotations[ANNOTATION_AVOID] != "" {
 
-		for _, namespace := range strings.Split(_annotations[ANNOTATION_AVOID], ";") {
+		if _annotations[ANNOTATION_AVOID] == "*" {
 
-			if !ListContainsString(_globalavoidnamespaces, namespace) {
+			totalavoidednamespaces = append(totalavoidednamespaces, currentAllNamespaces...)
 
-				totalavoidednamespaces = append(totalavoidednamespaces, namespace)
+		} else {
+
+			for _, namespace := range strings.Split(_annotations[ANNOTATION_AVOID], ";") {
+
+				if !ListContainsString(_globalavoidnamespaces, namespace) {
+
+					totalavoidednamespaces = append(totalavoidednamespaces, namespace)
+				}
 			}
 		}
 	}
@@ -100,16 +107,23 @@ func GetDistributeNamespaces(_globalavoidnamespaces []string, _annotations map[s
 	// ###########################################################################################################################
 	// get all desired namespaces from the secret annotation
 	// if the annotation <configurj.jnnkrdb.de/match> is empty, it will
-	// be ignored
+	// be ignored, if the value is '*'
 	totaldesirednamespaces := []string{}
 
 	if _annotations[ANNOTATION_MATCH] != "" {
 
-		for _, namespace := range strings.Split(_annotations[ANNOTATION_MATCH], ";") {
+		if _annotations[ANNOTATION_MATCH] == "*" {
 
-			if ListContainsString(currentAllNamespaces, namespace) {
+			totaldesirednamespaces = append(totaldesirednamespaces, currentAllNamespaces...)
 
-				totaldesirednamespaces = append(totaldesirednamespaces, namespace)
+		} else {
+
+			for _, namespace := range strings.Split(_annotations[ANNOTATION_MATCH], ";") {
+
+				if ListContainsString(currentAllNamespaces, namespace) {
+
+					totaldesirednamespaces = append(totaldesirednamespaces, namespace)
+				}
 			}
 		}
 	}
