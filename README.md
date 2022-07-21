@@ -45,23 +45,24 @@ The manifests are minimalistic and do only contain the minimum neccessary inform
   
 #### Namespace
 ```yaml
+---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: configurj
----
 ```  
 #### ServiceAccount
 ```yaml
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   namespace: configurj
   name: configurj-sa
----
 ```  
 #### ClusterRole
 ```yaml
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -75,10 +76,10 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
     verbs: ["list", "get", "create", "delete"]
----
 ```  
 #### ClusterRoleBinding
 ```yaml
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -91,10 +92,10 @@ subjects:
   - kind: ServiceAccount
     name: configurj-sa
     namespace: configurj
----
 ```  
 #### ConfigMap
 ```yaml
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -103,10 +104,10 @@ metadata:
 data:
   settings.json: |
     "..."
----
 ```  
 #### Deployment  
 ```yaml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -151,7 +152,6 @@ spec:
         - name: settings
           configMap:
             name: configurj-settings
----
 ```  
 
 ### Configuration
