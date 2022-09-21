@@ -6,6 +6,7 @@ to another Namespace and keep the resources updated.
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](https://go.dev/)
 [![GitHub](https://badgen.net/badge/icon/github?icon=github&label)](https://github.com/jnnkrdb/configurj)
 [![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://hub.docker.com/r/jnnkrdb/configurj)
+[![CodeFactor](https://www.codefactor.io/repository/github/jnnkrdb/configurj/badge)](https://www.codefactor.io/repository/github/jnnkrdb/configurj)
 
 ## Table of Contents
 
