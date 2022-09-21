@@ -4,9 +4,8 @@ in the cluster. It is used, to copy one or more Secrets/ConfigMaps from one Name
 to another Namespace and keep the resources updated. 
 
 [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/gomods/athens.svg)](https://github.com/jnnkrdb/configurj)
-[![GitHub](https://badgen.net/badge/icon/github?icon=github&label)](https://github.com/jnnkrdb/configurj)
-[![Docker](https://badgen.net/badge/icon/docker?icon=docker&label)](https://hub.docker.com/r/jnnkrdb/configurj)
 [![CodeFactor](https://www.codefactor.io/repository/github/jnnkrdb/configurj/badge)](https://www.codefactor.io/repository/github/jnnkrdb/configurj)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jnnkrdb/configurj)](https://goreportcard.com/report/github.com/jnnkrdb/configurj)
 
 ## Table of Contents
 
