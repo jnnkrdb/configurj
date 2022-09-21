@@ -6,6 +6,8 @@ to another Namespace and keep the resources updated.
 [![GitHub go.mod Go version of a Go module](https://img.shields.io/github/go-mod/go-version/gomods/athens.svg)](https://github.com/jnnkrdb/configurj)
 [![CodeFactor](https://www.codefactor.io/repository/github/jnnkrdb/configurj/badge)](https://www.codefactor.io/repository/github/jnnkrdb/configurj)
 [![Go Report Card](https://goreportcard.com/badge/github.com/jnnkrdb/configurj)](https://goreportcard.com/report/github.com/jnnkrdb/configurj)
+[![Github tag](https://badgen.net/github/tag/jnnkrdb/configurj)](https://github.com/jnnkrdb/configurj/tags/)
+[![GitHub issues](https://badgen.net/github/issues/jnnkrdb/configurj/)](https://github.com/jnnkrdb/configurj/issues/)
 
 ## Table of Contents
 
