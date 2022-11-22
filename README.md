@@ -228,18 +228,25 @@ spec:
           properties:
             spec:
               type: object
+              x-kubernetes-validation: 
+                - rule: "self.type in ['Opaque','kubernetes.io/service-account-token','kubernetes.io/dockercfg','kubernetes.io/dockerconfigjson','kubernetes.io/basic-auth','kubernetes.io/ssh-auth','kubernetes.io/tls','bootstrap.kubernetes.io/token']"
+                  message: "please use an existing secret.type -> https://kubernetes.io/docs/concepts/configuration/secret/#secret-types"
               # crds properties
               properties:
+                immutable: 
+                  type: boolean
                 namespaces: 
                   type: array
                   items: 
                     type: string
                 name: 
                   type: string
+                type: 
+                  type: string
                 data:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-              required: [namespaces, name, data]
+              required: [namespaces, name, data, type]
 ```
 ### Configuration
 
