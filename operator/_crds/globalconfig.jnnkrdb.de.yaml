@@ -1,0 +1,17 @@
+apiVersion: globals.jnnkrdb.de/v1alpha1
+kind: GlobalConfig
+metadata:
+  name: test-config
+  labels:
+    source: configurj
+spec:
+  namespaces: 
+    - "default"
+    - "configurj"
+  name: "test-gc"
+  data:
+    value1: "testvalue"
+    value2: |
+      längeres
+      test
+      value
