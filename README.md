@@ -10,15 +10,15 @@ ConfiguRJ is a Kubernetes Operator, that creates and updates Secrets and ConfigM
 
 - [Installation](#installation)
   - [Deploying to Kubernetes](#deploying-to-kubernetes)
+    - [Namespace](#namespace)
+    - [ServiceAccount](#serviceaccount)
+    - [ClusterRole](#clusterrole)
+    - [ClusterRoleBinding](#clusterrolebinding)
+    - [ConfigMap](#configmap)
+    - [Deployment](#deployment)
+    - [CustomResourceDefinition](#customresourcedefinition)
   - [Configuration](#configuration)
-- [Secrets and ConfigMaps](#secrets-and-configmaps)
-  - [Original Annotations](#original-annotations)
-  - [Replica Annotations](#replica-annotations)
-- [Routines](#routines)
-  - [Namespace Collection](#namespace-collection)
-  - [Original Handling](#original-handling)
-  - [Replica Distribution](#replica-distribution)
-  - [Health-Operator](#health-operator)
+- [RoadMap or Planned](#roadmap-or-planned)
   
 ## Installation
   
@@ -248,11 +248,9 @@ spec:
                   x-kubernetes-preserve-unknown-fields: true
               required: [namespaces, name, data, type]
 ```
+
 ### Configuration
-
-This is the necessary content for the settings.json. 
-
-`debugging` is a bool-value, which determines, if the debbuging-print to console will be activated. `timeoutsec` is a float64-value, which determines the wait timeout between each routine.`globalavoidnamespaces` is a string-value collection of the namespaces in the cluster, that will be avoided in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
+This is the necessary content for the settings.json. `debugging` is a bool-value, which determines, if the debbuging-print to console will be activated. `timeoutsec` is a float64-value, which determines the wait timeout between each routine.`globalavoidnamespaces` is a string-value collection of the namespaces in the cluster, that will be avoided in any case. Namespaces that will be configured in these avoids are on the highest avoid-priority.
 
 ```json
 {
@@ -265,7 +263,7 @@ This is the necessary content for the settings.json.
 }
 ```
 
-# RoadMap or Planned
+## RoadMap or Planned
 - Ingress Configuration
 - Angular UI -> Overview of Globals
   - ``docker.io/jnnkrdb/configurj-ui:latest``
