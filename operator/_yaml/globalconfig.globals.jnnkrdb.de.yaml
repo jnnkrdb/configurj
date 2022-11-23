@@ -1,0 +1,11 @@
+apiVersion: globals.jnnkrdb.de/v1alpha1
+kind: GlobalConfig
+metadata:
+  name: gc-name
+spec:
+  immutable: false
+  namespaces:
+    avoidregex: []
+    matchregex: []
+  name: cm-name
+  data: {}

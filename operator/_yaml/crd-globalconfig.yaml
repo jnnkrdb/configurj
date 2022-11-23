@@ -26,13 +26,25 @@ spec:
               properties:
                 immutable: 
                   type: boolean
+                  default: false
                 namespaces: 
-                  type: array
-                  items: 
-                    type: string
+                  type: object
+                  properties:
+                    avoidregex:
+                      type: array
+                      items: 
+                        type: string
+                      default: []
+                    matchregex:
+                      type: array
+                      items: 
+                        type: string
+                      default: []
+                  required: [avoidregex, matchregex]
                 name: 
                   type: string
                 data:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-              required: [active, namespaces, name, data]
+                  default: {}
+              required: [name, namespaces]

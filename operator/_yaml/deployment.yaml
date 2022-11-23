@@ -1,24 +1,33 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: configurj
+  name: configurj-operator
   namespace: configurj
   labels:
     app: configurj
+    type: operator
 spec:
   selector:
     matchLabels:
       app: configurj
+      type: operator
   template:
     metadata:
       labels:
         app: configurj
+        type: operator
     spec:
       serviceAccountName: configurj-sa
       containers:
-      - name: configurj-controller
-        image: docker.io/jnnkrdb/configurj:v1-stable
+      - name: configurj-operator
+        image: docker.io/jnnkrdb/configurj-engine:latest
         imagePullPolicy: Always
+        envs:
+          - name: DEBUGGING
+            value: "true"
+          - name: TIMEOUTMINUTES
+            value: "3"
         resources:
           limits:
             memory: "128Mi"
@@ -27,18 +36,9 @@ spec:
             memory: "64Mi"
             cpu: "250m"
         livenessProbe:
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
           httpGet:
-            path: /livez
-            # the port will be configured in the configmap -> settings.json
-            port: 8080
-          failureThreshold: 10
-        volumeMounts:
-          - name: settings
-            mountPath: /configs
-            readOnly: true
-      volumes:
-        - name: settings
-          configMap:
-            name: configurj-settings
+            path: /healthz/live
+            port: 80
+          failureThreshold: 5

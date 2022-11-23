@@ -7,7 +7,11 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces"]
     verbs: ["list", "get"]
-  # Get/Create/List/Delete Conigmaps and Secrets
+  # Get/Create/List/Delete Configmaps and Secrets
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
     verbs: ["list", "get", "create", "delete"]
+  # Get/List globals.jnnkrdb.de
+  - apiGroups: ["globals.jnnkrdb.de"]
+    resources: ["globalsecrets", "globalconfigs"]
+    verbs: ["get", "list"]

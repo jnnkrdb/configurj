@@ -2,56 +2,66 @@ package handler
 
 import (
 	"context"
+	"regexp"
 
 	"github.com/jnnkrdb/configurj-engine/core"
-	"github.com/jnnkrdb/corerdb/fnc"
 	"github.com/jnnkrdb/corerdb/prtcl"
 
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func get_AllNamespaces() (*v1.NamespaceList, error) {
+// receive the namespace lists (all namespaces, avoided via regex, matched via regex)
+func GetNamespaceLists(avoids, matches []string) (_all, _match []string) {
 
-	// request all namespaces of the cluster
+	_all, _match = []string{}, []string{}
+
 	if all_ns, err := core.K8SCLIENT.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); err != nil {
 
 		prtcl.Log.Println("error while requesting the namespaces:", err)
 
 		prtcl.PrintObject(all_ns, err)
 
-		return nil, err
-
 	} else {
 
-		prtcl.Log.Println("successfully received all namespaces")
-
-		return all_ns, nil
-	}
-}
-
-// receive all namespaces and calculate the allowed ones
-func calculateAllowedNamespaces(avoids []string) []string {
-
-	prtcl.Log.Println("calculating the allowed namespaces")
-
-	prtcl.PrintObject(avoids)
-
-	allowedNamespaces := []string{}
-
-	// request all namespaces of the cluster
-	if all_ns, err := get_AllNamespaces(); err == nil {
-
-		// calculate the allowed namespaces with the given avoids array
 		for _, ns := range all_ns.Items {
 
-			if fnc.StringInList(ns.Name, avoids) {
+			// add to all-list
+			_all = append(_all, ns.Name)
 
-				allowedNamespaces = append(allowedNamespaces, ns.Name)
+			// calculate match list
+			for _, a := range avoids {
+
+				if regexAvoidMatched, err := regexp.MatchString(a, ns.Name); err != nil {
+
+					prtcl.Log.Println("error while comparing [avoid] regexp with namespace-name:", err)
+
+					prtcl.PrintObject(a, ns, err)
+
+				} else {
+
+					if !regexAvoidMatched {
+
+						for _, m := range matches {
+
+							if regexMatchMatched, err := regexp.MatchString(m, ns.Name); err != nil {
+
+								prtcl.Log.Println("error while comparing [match] regexp with namespace-name:", err)
+
+								prtcl.PrintObject(m, ns, err)
+
+							} else {
+
+								if regexMatchMatched {
+
+									_match = append(_match, ns.Name)
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
 
-	// set the allowed namespaces
-	return allowedNamespaces
+	return
 }

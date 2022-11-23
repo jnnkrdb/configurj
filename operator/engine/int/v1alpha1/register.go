@@ -11,7 +11,7 @@ const (
 	GroupVersion = "v1alpha1"
 )
 
-var SchemeGroupVersion = schema.GroupVersion{Group: "globals.jnnkrdb.de", Version: "v1alpha1"}
+var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: GroupVersion}
 
 var (
 	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)

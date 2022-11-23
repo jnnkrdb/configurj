@@ -6,10 +6,13 @@ import (
 )
 
 type GlobalConfigSpec struct {
-	Immutable  bool              `json:"immutable"`
-	Name       string            `json:"name"`
-	Namespaces []string          `json:"namespaces"`
-	Data       map[string]string `json:"data"`
+	Immutable  bool   `json:"immutable"`
+	Name       string `json:"name"`
+	Namespaces struct {
+		AvoidRegex []string `json:"avoidregex"`
+		MatchRegex []string `json:"matchregex"`
+	} `json:"namespaces"`
+	Data map[string]string `json:"data"`
 }
 
 // deepcopy

@@ -6,11 +6,14 @@ import (
 )
 
 type GlobalSecretSpec struct {
-	Immutable  bool              `json:"immutable"`
-	Name       string            `json:"name"`
-	Namespaces []string          `json:"namespaces"`
-	Type       string            `json:"type"`
-	Data       map[string]string `json:"data"`
+	Immutable  bool   `json:"immutable"`
+	Name       string `json:"name"`
+	Namespaces struct {
+		AvoidRegex []string `json:"avoidregex"`
+		MatchRegex []string `json:"matchregex"`
+	} `json:"namespaces"`
+	Type string            `json:"type"`
+	Data map[string]string `json:"data"`
 }
 
 // deepcopy

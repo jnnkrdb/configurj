@@ -4,8 +4,25 @@ go 1.19
 
 require (
 	github.com/jnnkrdb/corerdb v1.4.0
+	github.com/jnnkrdb/httprdb v1.0.1
+	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3
 	k8s.io/client-go v0.25.3
+)
+
+require (
+	github.com/gin-contrib/cors v1.4.0 // indirect
+	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/gin-gonic/gin v1.8.1
+	github.com/go-playground/locales v0.14.0 // indirect
+	github.com/go-playground/universal-translator v0.18.0 // indirect
+	github.com/go-playground/validator/v10 v10.10.0 // indirect
+	github.com/goccy/go-json v0.9.7 // indirect
+	github.com/leodido/go-urn v1.2.1 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/ugorji/go/codec v1.2.7 // indirect
+	golang.org/x/crypto v0.0.0-20220315160706-3147a52a75dd // indirect
 )
 
 require (
@@ -38,7 +55,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.25.3 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20220803162953-67bda5d908f1 // indirect
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect

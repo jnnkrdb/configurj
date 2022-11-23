@@ -15,95 +15,92 @@ import (
 )
 
 // function to create, update and delete configmaps from a globalconfig
-func crud_Configmaps(allowedNamespaces []string, gc v1alpha1.GlobalConfig) {
+func CRUD_Configmaps(gc v1alpha1.GlobalConfig) {
 
 	prtcl.Log.Println("process globalconfig:", gc.Namespace+"/"+gc.Name)
 
+	// request the namespace lists (all namespaces, avoided via regex, matched via regex)
+	all_namespaces, matched_namespaces := GetNamespaceLists(gc.Spec.Namespaces.AvoidRegex, gc.Spec.Namespaces.MatchRegex)
+
 	// DELETE
-	if allnamespaces, err := get_AllNamespaces(); err == nil {
+	for _, clusternamespace := range all_namespaces {
 
-		for _, clusternamespace := range allnamespaces.Items {
+		if !fnc.StringInList(clusternamespace, matched_namespaces) {
 
-			if !fnc.StringInList(clusternamespace.Name, allowedNamespaces) || !fnc.StringInList(clusternamespace.Name, gc.Spec.Namespaces) {
+			prtcl.Log.Println("deleting configmap:", clusternamespace+"/"+gc.Spec.Name)
 
-				prtcl.Log.Println("deleting configmap", gc.Spec.Name, "from namespace", clusternamespace.Name)
+			if err := core.K8SCLIENT.CoreV1().ConfigMaps(clusternamespace).Delete(context.TODO(), gc.Spec.Name, metav1.DeleteOptions{}); err != nil {
 
-				if err := core.K8SCLIENT.CoreV1().ConfigMaps(clusternamespace.Name).Delete(context.TODO(), gc.Spec.Name, metav1.DeleteOptions{}); err != nil {
+				prtcl.Log.Println("error deleting configmap [", clusternamespace+"/"+gc.Spec.Name+"]:", err)
 
-					prtcl.Log.Println("error deleting configmap", clusternamespace.Name+"/"+gc.Spec.Name+":", err)
+				prtcl.PrintObject(gc, clusternamespace, err)
 
-					prtcl.PrintObject(gc, allnamespaces, clusternamespace, err)
+			} else {
 
-				} else {
-
-					prtcl.Log.Println("deleted configmap", clusternamespace.Name+"/"+gc.Spec.Name)
-				}
+				prtcl.Log.Println("deleted configmap:", clusternamespace+"/"+gc.Spec.Name)
 			}
 		}
 	}
 
-	for _, gc_spec_namespace := range gc.Spec.Namespaces {
+	for _, matchednamespace := range matched_namespaces {
 
-		if cm, err := core.K8SCLIENT.CoreV1().ConfigMaps(gc_spec_namespace).Get(context.TODO(), gc.Spec.Name, metav1.GetOptions{}); err != nil {
+		if cm, err := core.K8SCLIENT.CoreV1().ConfigMaps(matchednamespace).Get(context.TODO(), gc.Spec.Name, metav1.GetOptions{}); err != nil {
 
 			// CREATE
-			if fnc.StringInList(gc_spec_namespace, allowedNamespaces) {
+			prtcl.Log.Println("creating configmap", matchednamespace+"/"+gc.Spec.Name)
 
-				prtcl.Log.Println("creating configmap", gc_spec_namespace+"/"+gc.Spec.Name)
+			var new = v1.ConfigMap{}
+			new.Name = gc.Spec.Name
+			new.Namespace = matchednamespace
+			new.Annotations[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+			new.Immutable = &gc.Spec.Immutable
+			new.Data = gc.Spec.Data
 
-				var new = v1.ConfigMap{}
-				new.Name = gc.Spec.Name
-				new.Namespace = gc_spec_namespace
-				new.Annotations["configurj.jnnkrdb.de/version"] = gc.ResourceVersion
-				new.Immutable = &gc.Spec.Immutable
-				new.Data = gc.Spec.Data
+			if res, err := core.K8SCLIENT.CoreV1().ConfigMaps(matchednamespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
 
-				if res, err := core.K8SCLIENT.CoreV1().ConfigMaps(gc_spec_namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
+				prtcl.Log.Println("error while creating configmap", new.Namespace+"/"+new.Name+":", err)
 
-					prtcl.Log.Println("error while creating configmap", new.Namespace+"/"+new.Name+":", err)
+				prtcl.PrintObject(gc, matched_namespaces, matchednamespace, cm, res, err)
 
-					prtcl.PrintObject(gc, allowedNamespaces, gc_spec_namespace, cm, res, err)
+			} else {
 
-				} else {
-
-					prtcl.Log.Println("configmap created:", res.Namespace+"/"+res.Name)
-				}
+				prtcl.Log.Println("configmap created:", res.Namespace+"/"+res.Name)
 			}
 
 		} else {
 
 			// UPDATE
-			if cm.Annotations["configurj.jnnkrdb.de/version"] != gc.ResourceVersion {
+			if cm.Annotations[ANNOTATION_RESOURCEVERSION] != gc.ResourceVersion {
 
 				prtcl.Log.Println("updating configmap", cm.Namespace+"/"+cm.Name)
 
 				// delete the old configmap
 				if err := core.K8SCLIENT.CoreV1().ConfigMaps(cm.Namespace).Delete(context.TODO(), cm.Name, metav1.DeleteOptions{}); err != nil {
 
-					prtcl.Log.Println("updating configmap", cm.Namespace+"/"+cm.Name, "failed:", err)
+					prtcl.Log.Println("error updating configmap [", cm.Namespace+"/"+cm.Name, "]:", err)
 
-					prtcl.PrintObject(gc, allowedNamespaces, gc_spec_namespace, cm, err)
+					prtcl.PrintObject(gc, matched_namespaces, matchednamespace, cm, err)
 
 				} else {
 
-					time.Sleep(2 * time.Minute)
+					time.Sleep(1 * time.Minute)
 
 					var new = v1.ConfigMap{}
 					new.Name = gc.Spec.Name
-					new.Namespace = gc_spec_namespace
-					new.Annotations["configurj.jnnkrdb.de/version"] = gc.ResourceVersion
+					new.Namespace = matchednamespace
+					new.Annotations[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
 					new.Immutable = &gc.Spec.Immutable
 					new.Data = gc.Spec.Data
 
 					if res, err := core.K8SCLIENT.CoreV1().ConfigMaps(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
 
-						prtcl.Log.Println("updating configmap", new.Namespace+"/"+new.Name, "failed:", err)
+						prtcl.Log.Println("error updating configmap [", cm.Namespace+"/"+cm.Name, "]:", err)
 
-						prtcl.PrintObject(gc, allowedNamespaces, gc_spec_namespace, cm, res, err)
+						prtcl.PrintObject(gc, matched_namespaces, matchednamespace, cm, res, err)
 
 					} else {
 
-						prtcl.Log.Println("configmap", new.Namespace+"/"+new.Name, "updated")
+						prtcl.Log.Println("configmap updated:", new.Namespace+"/"+new.Name)
 					}
 				}
 			}
