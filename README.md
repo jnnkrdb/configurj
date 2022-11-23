@@ -262,7 +262,7 @@ spec:
       - name: configurj-operator
         image: docker.io/jnnkrdb/configurj-engine:latest
         imagePullPolicy: Always
-        envs:
+        env:
           - name: DEBUGGING
             value: "true"
           - name: TIMEOUTMINUTES
