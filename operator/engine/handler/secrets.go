@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"time"
 
 	"github.com/jnnkrdb/configurj-engine/core"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
@@ -19,26 +18,70 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 
 	prtcl.Log.Println("process globalsecret:", gs.Namespace+"/"+gs.Name)
 
+	prtcl.PrintObject(gs)
+
 	// request the namespace lists (all namespaces, avoided via regex, matched via regex)
 	all_namespaces, matched_namespaces := GetNamespaceLists(gs.Spec.Namespaces.AvoidRegex, gs.Spec.Namespaces.MatchRegex)
+
+	// build create/delete functions
+	_create := func(namespace string) {
+
+		prtcl.Log.Println("creating secret:", namespace+"/"+gs.Spec.Name)
+
+		var new = v1.Secret{}
+		new.Name = gs.Spec.Name
+		new.Namespace = namespace
+		new.Annotations = func() map[string]string {
+			result := make(map[string]string)
+			result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
+			return result
+		}()
+		new.Immutable = &gs.Spec.Immutable
+		new.StringData = func() map[string]string {
+			result := make(map[string]string)
+			for k, v := range gs.Spec.Data {
+				result[k] = fnc.UnencodeB64(v)
+			}
+			return result
+		}()
+		new.Type = v1.SecretType(gs.Spec.Type)
+
+		if res, err := core.K8SCLIENT.CoreV1().Secrets(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
+
+			prtcl.Log.Println("error while creating secret [", new.Namespace+"/"+new.Name+"]:", err)
+
+			prtcl.PrintObject(new, res, err)
+
+		} else {
+
+			prtcl.Log.Println("secret created:", res.Namespace+"/"+res.Name)
+		}
+	}
+
+	_delete := func(namespace string) (err error) {
+
+		err = nil
+
+		prtcl.Log.Println("deleting secret:", namespace+"/"+gs.Spec.Name)
+
+		if err = core.K8SCLIENT.CoreV1().Secrets(namespace).Delete(context.TODO(), gs.Spec.Name, metav1.DeleteOptions{}); err != nil {
+
+			prtcl.Log.Println("error deleting secret ["+namespace+"/"+gs.Spec.Name+"]:", err)
+
+		} else {
+
+			prtcl.Log.Println("deleted secret:", namespace+"/"+gs.Spec.Name)
+		}
+
+		return
+	}
 
 	// DELETE
 	for _, clusternamespace := range all_namespaces {
 
 		if !fnc.StringInList(clusternamespace, matched_namespaces) {
 
-			prtcl.Log.Println("deleting secret:", clusternamespace+"/"+gs.Spec.Name)
-
-			if err := core.K8SCLIENT.CoreV1().Secrets(clusternamespace).Delete(context.TODO(), gs.Spec.Name, metav1.DeleteOptions{}); err != nil {
-
-				prtcl.Log.Println("error deleting secret [", clusternamespace+"/"+gs.Spec.Name+"]:", err)
-
-				prtcl.PrintObject(gs, clusternamespace, err)
-
-			} else {
-
-				prtcl.Log.Println("deleted secret:", clusternamespace+"/"+gs.Spec.Name)
-			}
+			_delete(clusternamespace)
 		}
 	}
 
@@ -46,37 +89,7 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 
 		if scrt, err := core.K8SCLIENT.CoreV1().Secrets(matchednamespace).Get(context.TODO(), gs.Spec.Name, metav1.GetOptions{}); err != nil {
 
-			// CREATE
-			prtcl.Log.Println("creating secret:", matchednamespace+"/"+gs.Spec.Name)
-
-			var new = v1.Secret{}
-			new.Name = gs.Spec.Name
-			new.Namespace = matchednamespace
-			new.Annotations = func() map[string]string {
-				result := make(map[string]string)
-				result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
-				return result
-			}()
-			new.Immutable = &gs.Spec.Immutable
-			new.Data = func(resource map[string]string) map[string][]byte {
-				result := make(map[string][]byte)
-				for k, v := range resource {
-					result[k] = []byte(v)
-				}
-				return result
-			}(gs.Spec.Data)
-			new.Type = v1.SecretType(gs.Spec.Type)
-
-			if res, err := core.K8SCLIENT.CoreV1().Secrets(matchednamespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
-
-				prtcl.Log.Println("error while creating secret [", new.Namespace+"/"+new.Name+"]:", err)
-
-				prtcl.PrintObject(gs, matched_namespaces, matchednamespace, scrt, res, err)
-
-			} else {
-
-				prtcl.Log.Println("secret created:", res.Namespace+"/"+res.Name)
-			}
+			_create(matchednamespace)
 
 		} else {
 
@@ -86,44 +99,9 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 				prtcl.Log.Println("updating secret:", scrt.Namespace+"/"+scrt.Name)
 
 				// delete the old secret
-				if err := core.K8SCLIENT.CoreV1().Secrets(scrt.Namespace).Delete(context.TODO(), scrt.Name, metav1.DeleteOptions{}); err != nil {
+				if _delete(matchednamespace) == nil {
 
-					prtcl.Log.Println("error updating secret [", scrt.Namespace+"/"+scrt.Name, "]:", err)
-
-					prtcl.PrintObject(gs, matched_namespaces, matchednamespace, scrt, err)
-
-				} else {
-
-					time.Sleep(1 * time.Minute)
-
-					var new = v1.Secret{}
-					new.Name = gs.Spec.Name
-					new.Namespace = matchednamespace
-					new.Annotations = func() map[string]string {
-						result := make(map[string]string)
-						result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
-						return result
-					}()
-					new.Immutable = &gs.Spec.Immutable
-					new.Data = func(resource map[string]string) map[string][]byte {
-						result := make(map[string][]byte)
-						for k, v := range resource {
-							result[k] = []byte(v)
-						}
-						return result
-					}(gs.Spec.Data)
-					new.Type = v1.SecretType(gs.Spec.Type)
-
-					if res, err := core.K8SCLIENT.CoreV1().Secrets(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
-
-						prtcl.Log.Println("error updating secret [", new.Namespace+"/"+new.Name, "]:", err)
-
-						prtcl.PrintObject(gs, matched_namespaces, matchednamespace, scrt, res, err)
-
-					} else {
-
-						prtcl.Log.Println("updated secret:", new.Namespace+"/"+new.Name)
-					}
+					_create(matchednamespace)
 				}
 			}
 		}

@@ -2,9 +2,9 @@ package handler
 
 import (
 	"context"
-	"regexp"
 
 	"github.com/jnnkrdb/configurj-engine/core"
+	"github.com/jnnkrdb/corerdb/fnc"
 	"github.com/jnnkrdb/corerdb/prtcl"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,51 +29,27 @@ func GetNamespaceLists(avoids, matches []string) (_all, _match []string) {
 			_all = append(_all, ns.Name)
 
 			// calculate match list
-			_matchfunc := func() {
-
-				for _, match := range matches {
-
-					if regexMatch, err := regexp.MatchString(match, ns.Name); err != nil {
-
-						prtcl.Log.Println("error while comparing [match] regexp with namespace-name:", err)
-
-						prtcl.PrintObject(match, ns, err)
-
-					} else {
-
-						if regexMatch {
-
-							_match = append(_match, ns.Name)
-						}
-					}
-				}
-			}
-
 			if len(avoids) > 0 {
 
-				for _, avoid := range avoids {
+				if !fnc.FindStringInRegexpList(ns.Name, avoids) {
 
-					if regexAvoid, err := regexp.MatchString(avoid, ns.Name); err != nil {
+					if fnc.FindStringInRegexpList(ns.Name, matches) {
 
-						prtcl.Log.Println("error while comparing [avoid] regexp with namespace-name:", err)
-
-						prtcl.PrintObject(avoid, ns, err)
-
-					} else {
-
-						if !regexAvoid {
-
-							_matchfunc()
-						}
+						_match = append(_match, ns.Name)
 					}
 				}
 
 			} else {
 
-				_matchfunc()
+				if fnc.FindStringInRegexpList(ns.Name, matches) {
+
+					_match = append(_match, ns.Name)
+				}
 			}
 		}
 	}
+
+	prtcl.PrintObject(_all, _match)
 
 	return
 }

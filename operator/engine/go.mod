@@ -3,7 +3,7 @@ module github.com/jnnkrdb/configurj-engine
 go 1.19
 
 require (
-	github.com/jnnkrdb/corerdb v1.4.0
+	github.com/jnnkrdb/corerdb v1.4.2
 	github.com/jnnkrdb/httprdb v1.0.1
 	k8s.io/api v0.25.3
 	k8s.io/apimachinery v0.25.3
