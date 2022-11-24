@@ -21,6 +21,8 @@ docker push jnnkrdb/configurj-engine:latest
 
 set /p enginetag_release=Set the ReleaseTag of the Engine-Container:
 
+if "%enginetag_release%" == "" goto END
+
 docker tag jnnkrdb/configurj-engine:latest jnnkrdb/configurj-engine:%enginetag_release%
 docker push jnnkrdb/configurj-engine:%enginetag_release%
 

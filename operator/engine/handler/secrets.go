@@ -54,13 +54,7 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 			new.Namespace = matchednamespace
 			new.Annotations[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
 			new.Immutable = &gs.Spec.Immutable
-			new.Data = func(resource map[string]string) map[string][]byte {
-				result := make(map[string][]byte)
-				for k, v := range resource {
-					result[k] = []byte(v)
-				}
-				return result
-			}(gs.Spec.Data)
+			new.Data = make(map[string][]byte) // gs.Spec.Data
 
 			if res, err := core.K8SCLIENT.CoreV1().Secrets(matchednamespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
 
