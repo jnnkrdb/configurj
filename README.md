@@ -142,16 +142,17 @@ spec:
                 namespaces: 
                   type: object
                   properties:
-                    avoidRegex:
+                    avoidregex:
                       type: array
                       items: 
                         type: string
                       default: []
-                    matchRegex:
+                    matchregex:
                       type: array
                       items: 
                         type: string
                       default: []
+                  required: [avoidregex, matchregex]
                 name: 
                   type: string
                 type: 
