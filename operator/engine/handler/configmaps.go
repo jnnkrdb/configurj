@@ -52,7 +52,11 @@ func CRUD_Configmaps(gc v1alpha1.GlobalConfig) {
 			var new = v1.ConfigMap{}
 			new.Name = gc.Spec.Name
 			new.Namespace = matchednamespace
-			new.Annotations[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+			new.Annotations = func() map[string]string {
+				result := make(map[string]string)
+				result[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+				return result
+			}()
 			new.Immutable = &gc.Spec.Immutable
 			new.Data = gc.Spec.Data
 
@@ -88,7 +92,11 @@ func CRUD_Configmaps(gc v1alpha1.GlobalConfig) {
 					var new = v1.ConfigMap{}
 					new.Name = gc.Spec.Name
 					new.Namespace = matchednamespace
-					new.Annotations[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+					new.Annotations = func() map[string]string {
+						result := make(map[string]string)
+						result[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+						return result
+					}()
 					new.Immutable = &gc.Spec.Immutable
 					new.Data = gc.Spec.Data
 

@@ -29,36 +29,48 @@ func GetNamespaceLists(avoids, matches []string) (_all, _match []string) {
 			_all = append(_all, ns.Name)
 
 			// calculate match list
-			for _, a := range avoids {
+			_matchfunc := func() {
 
-				if regexAvoidMatched, err := regexp.MatchString(a, ns.Name); err != nil {
+				for _, match := range matches {
 
-					prtcl.Log.Println("error while comparing [avoid] regexp with namespace-name:", err)
+					if regexMatch, err := regexp.MatchString(match, ns.Name); err != nil {
 
-					prtcl.PrintObject(a, ns, err)
+						prtcl.Log.Println("error while comparing [match] regexp with namespace-name:", err)
 
-				} else {
+						prtcl.PrintObject(match, ns, err)
 
-					if !regexAvoidMatched {
+					} else {
 
-						for _, m := range matches {
+						if regexMatch {
 
-							if regexMatchMatched, err := regexp.MatchString(m, ns.Name); err != nil {
-
-								prtcl.Log.Println("error while comparing [match] regexp with namespace-name:", err)
-
-								prtcl.PrintObject(m, ns, err)
-
-							} else {
-
-								if regexMatchMatched {
-
-									_match = append(_match, ns.Name)
-								}
-							}
+							_match = append(_match, ns.Name)
 						}
 					}
 				}
+			}
+
+			if len(avoids) > 0 {
+
+				for _, avoid := range avoids {
+
+					if regexAvoid, err := regexp.MatchString(avoid, ns.Name); err != nil {
+
+						prtcl.Log.Println("error while comparing [avoid] regexp with namespace-name:", err)
+
+						prtcl.PrintObject(avoid, ns, err)
+
+					} else {
+
+						if !regexAvoid {
+
+							_matchfunc()
+						}
+					}
+				}
+
+			} else {
+
+				_matchfunc()
 			}
 		}
 	}
