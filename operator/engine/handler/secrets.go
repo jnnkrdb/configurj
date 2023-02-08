@@ -3,11 +3,12 @@ package handler
 import (
 	"context"
 
-	"github.com/jnnkrdb/configurj-engine/core"
+	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
 
 	"github.com/jnnkrdb/corerdb/fnc"
-	"github.com/jnnkrdb/corerdb/prtcl"
+	"github.com/jnnkrdb/k8s/operator"
+	"github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,94 +17,168 @@ import (
 // function to create, update and delete secrets from a globalsecret
 func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 
-	prtcl.Log.Println("process globalsecret:", gs.Namespace+"/"+gs.Name)
+	crudlog := env.Log().WithFields(logrus.Fields{
+		"current.globalsecret.name":      gs.Name,
+		"current.globalsecret.namespace": gs.Namespace,
+	})
 
-	prtcl.PrintObject(gs)
+	crudlog.Debug("processing globalconfig")
 
+	var (
+		all_namespaces     *[]string
+		matched_namespaces *[]string
+		err                *error
+	)
+
+	crudlog.WithFields(logrus.Fields{
+		"all_namespaces":     *all_namespaces,
+		"matched_namespaces": *matched_namespaces,
+		"err":                *err,
+	}).Trace("allocated cache for objects")
+
+	crudlog.Debug("requesting namespace lists")
 	// request the namespace lists (all namespaces, avoided via regex, matched via regex)
-	all_namespaces, matched_namespaces := GetNamespaceLists(gs.Spec.Namespaces.AvoidRegex, gs.Spec.Namespaces.MatchRegex)
+	*all_namespaces, *matched_namespaces, *err = GetNamespaceLists(gs.Spec.Namespaces.AvoidRegex, gs.Spec.Namespaces.MatchRegex)
 
-	// build create/delete functions
-	_create := func(namespace string) {
-
-		prtcl.Log.Println("creating secret:", namespace+"/"+gs.Spec.Name)
-
-		var new = v1.Secret{}
-		new.Name = gs.Spec.Name
-		new.Namespace = namespace
-		new.Annotations = func() map[string]string {
-			result := make(map[string]string)
-			result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
-			return result
-		}()
-		new.Immutable = &gs.Spec.Immutable
-		new.StringData = func() map[string]string {
-			result := make(map[string]string)
-			for k, v := range gs.Spec.Data {
-				result[k] = fnc.UnencodeB64(v)
-			}
-			return result
-		}()
-		new.Type = v1.SecretType(gs.Spec.Type)
-
-		if res, err := core.K8SCLIENT.CoreV1().Secrets(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
-
-			prtcl.Log.Println("error while creating secret [", new.Namespace+"/"+new.Name+"]:", err)
-
-			prtcl.PrintObject(new, res, err)
-
-		} else {
-
-			prtcl.Log.Println("secret created:", res.Namespace+"/"+res.Name)
-		}
-	}
-
-	_delete := func(namespace string) (err error) {
-
-		err = nil
-
-		prtcl.Log.Println("deleting secret:", namespace+"/"+gs.Spec.Name)
-
-		if err = core.K8SCLIENT.CoreV1().Secrets(namespace).Delete(context.TODO(), gs.Spec.Name, metav1.DeleteOptions{}); err != nil {
-
-			prtcl.Log.Println("error deleting secret ["+namespace+"/"+gs.Spec.Name+"]:", err)
-
-		} else {
-
-			prtcl.Log.Println("deleted secret:", namespace+"/"+gs.Spec.Name)
-		}
-
-		return
-	}
+	crudlog.WithFields(logrus.Fields{
+		"all_namespaces":     *all_namespaces,
+		"matched_namespaces": *matched_namespaces,
+		"err":                *err,
+	}).Trace("received namespaces lists")
 
 	// DELETE
-	for _, clusternamespace := range all_namespaces {
+	crudlog.Debug("delete non-matching secrets")
 
-		if !fnc.StringInList(clusternamespace, matched_namespaces) {
+	for _, clusternamespace := range *all_namespaces {
 
-			_delete(clusternamespace)
+		delTrace := crudlog.WithFields(logrus.Fields{
+			"current.namespace":   clusternamespace,
+			"matching.namespaces": *matched_namespaces,
+		})
+
+		delTrace.Trace("checking namespace match")
+
+		if !fnc.StringInList(clusternamespace, *matched_namespaces) {
+
+			delTrace.Trace("namespace does not match with required namespaces")
+
+			_DeleteSecret(clusternamespace, gs.Spec.Name)
+
+		} else {
+
+			delTrace.Trace("namespace does match with required namespaces")
 		}
 	}
 
-	for _, matchednamespace := range matched_namespaces {
+	crudlog.Debug("creating/updating matching secrets")
 
-		if scrt, err := core.K8SCLIENT.CoreV1().Secrets(matchednamespace).Get(context.TODO(), gs.Spec.Name, metav1.GetOptions{}); err != nil {
+	for _, matchednamespace := range *matched_namespaces {
 
-			_create(matchednamespace)
+		llog := crudlog.WithField("destination.secret", matchednamespace+"/"+gs.Spec.Name)
+
+		llog.Trace("checking the existence of the secret")
+
+		if scrt, err := operator.K8S().CoreV1().Secrets(matchednamespace).Get(context.TODO(), gs.Spec.Name, metav1.GetOptions{}); err != nil {
+
+			llog.Trace("secret does not exist")
+
+			// CREATE
+			_CreateSecret(matchednamespace, gs)
 
 		} else {
+
+			llog.Trace("secret does exist")
+
+			vercomplog := llog.WithFields(logrus.Fields{
+				"secret.annotation.resourceversion":    scrt.Annotations[ANNOTATION_RESOURCEVERSION],
+				"current.globalsecret.resourceversion": gs.ResourceVersion,
+			})
+
+			vercomplog.Trace("comparing secret versions")
 
 			// UPDATE
 			if scrt.Annotations[ANNOTATION_RESOURCEVERSION] != gs.ResourceVersion {
 
-				prtcl.Log.Println("updating secret:", scrt.Namespace+"/"+scrt.Name)
+				vercomplog.Trace("versions do not match, updating secret")
 
 				// delete the old secret
-				if _delete(matchednamespace) == nil {
+				if _DeleteSecret(matchednamespace, scrt.Name) == nil {
 
-					_create(matchednamespace)
+					_CreateSecret(matchednamespace, gs)
 				}
 			}
 		}
 	}
+}
+
+// create function for secrets
+func _CreateSecret(namespace string, gs v1alpha1.GlobalSecret) (err error) {
+
+	createlog := env.Log().WithFields(logrus.Fields{
+		"destination.secret":  namespace + "/" + gs.Spec.Name,
+		"source.globalsecret": gs.Namespace + "/" + gs.Name,
+	})
+
+	createlog.Debug("creating secret")
+
+	createlog.Trace("initializing new secret in cache")
+
+	var new = v1.Secret{}
+	new.Name = gs.Spec.Name
+	new.Namespace = namespace
+	new.Annotations = func() map[string]string {
+		result := make(map[string]string)
+		result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
+		return result
+	}()
+	new.Immutable = &gs.Spec.Immutable
+	new.StringData = func() map[string]string {
+		result := make(map[string]string)
+		for k, v := range gs.Spec.Data {
+			result[k] = fnc.UnencodeB64(v)
+		}
+		return result
+	}()
+	new.Type = v1.SecretType(gs.Spec.Type)
+
+	createlog.WithField("secret", new).Trace("initialized new secret in cache")
+
+	var scrt_result *v1.Secret
+
+	scrt_result, err = operator.K8S().CoreV1().Secrets(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{})
+
+	createlog.WithFields(logrus.Fields{
+		"secret.cached":         new,
+		"secret.creationresult": *scrt_result,
+	}).Debug("secrets content")
+
+	if err != nil {
+
+		createlog.WithError(err).Error("error while creating secret")
+
+	} else {
+
+		createlog.Debug("secret created")
+	}
+
+	return
+}
+
+// delete function for secrets
+func _DeleteSecret(namespace, name string) (err error) {
+
+	env.Log().WithField("delete.secret", namespace+"/"+name).Debug("deleting secret")
+
+	err = operator.K8S().CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+
+	if err != nil {
+
+		env.Log().WithField("delete.secret", namespace+"/"+name).WithError(err).Error("error deleting secret")
+
+	} else {
+
+		env.Log().WithField("delete.secret", namespace+"/"+name).Trace("deleted secret")
+	}
+
+	return
 }

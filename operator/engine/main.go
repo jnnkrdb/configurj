@@ -1,25 +1,26 @@
 package main
 
 import (
-	"context"
-	"os"
-	"strconv"
+	"net/http"
 	"time"
 
-	"github.com/jnnkrdb/configurj-engine/core"
 	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/handler"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
-	"github.com/sirupsen/logrus"
 
-	"github.com/gin-gonic/gin"
-	"github.com/jnnkrdb/corerdb/prtcl"
-	"github.com/jnnkrdb/httprdb"
 	"github.com/jnnkrdb/k8s/operator"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	Debugging bool = false
+
+	// cached error
+	err *error = nil
+
+	// lists of the resources
+
+	gcList *v1alpha1.GlobalConfigList
+	gsList *v1alpha1.GlobalSecretList
 )
 
 func main() {
@@ -31,30 +32,25 @@ func main() {
 		},
 	}).Print("initializing configurj")
 
-	// initialize the env configs
-	if debug, err := strconv.ParseBool(os.Getenv("DEBUGGING")); err == nil {
-		Debugging = debug
-	}
+	if *err = operator.InitK8sOperatorClient(); *err != nil {
 
-	// activate logging
-	prtcl.SetDebugging(Debugging)
-
-	var err error
-	if err = operator.InitK8sOperatorClient(); err != nil {
-
-		env.Log().WithError(err).Error("error while initializing base kubernetes operator")
+		env.Log().WithError(*err).Error("error while initializing base kubernetes operator")
 
 	} else {
 
 		env.Log().Debug("successfully initialized base kubernetes operator")
 
-		if err = operator.InitCRDOperatorRestClient(v1alpha1.GroupName, v1alpha1.GroupVersion, v1alpha1.AddToScheme); err != nil {
+		if *err = operator.InitCRDOperatorRestClient(v1alpha1.GroupName, v1alpha1.GroupVersion, v1alpha1.AddToScheme); *err != nil {
 
-			env.Log().WithError(err).Error("error while initializing crds kubernetes operator")
+			env.Log().WithError(*err).Error("error while initializing crds kubernetes operator")
 
 		} else {
 
 			env.Log().Debug("successfully initialized crds kubernetes operator")
+
+			env.Log().WithField("globalconfiglist", gcList).Trace("allocated space for new globalconfiglist")
+
+			env.Log().WithField("globalsecretlist", gsList).Trace("allocated space for new globalsecretlist")
 
 			go func() {
 
@@ -62,89 +58,85 @@ func main() {
 
 				for {
 
+					env.Log().Debug("requesting list of globalconfigs")
+
+					if *gcList, *err = v1alpha1.GetGlobalConfigList(); *err != nil {
+
+						env.Log().WithError(*err).Error("error receiving list of globalconfigs")
+
+					} else {
+
+						env.Log().WithField("globalconfiglist", gcList).Trace("received list of globalconfigs")
+
+						env.Log().Debug("starting routine for globalconfigs")
+
+						for _, gc := range gcList.Items {
+
+							handler.CRUD_Configmaps(gc)
+						}
+					}
+
+					// empty list and free storage
+					env.Log().Trace("delete cached globalconfigs list")
+					*gcList = v1alpha1.GlobalConfigList{}
+
+					env.Log().Trace("requesting list of globalsecrets")
+
+					if *gsList, *err = v1alpha1.GetGlobalSecretList(); *err != nil {
+
+						env.Log().WithError(*err).Error("error receiving list of globalsecrets")
+
+					} else {
+
+						env.Log().WithField("globalsecretlist", gsList).Trace("received list of globalsecrets")
+
+						env.Log().Debug("starting routine for globalsecrets")
+
+						for _, gs := range gsList.Items {
+
+							handler.CRUD_Secrets(gs)
+						}
+					}
+
+					// empty list and free storage
+					env.Log().Trace("delete cached globalsecrets list")
+					*gsList = v1alpha1.GlobalSecretList{}
+
+					env.Log().WithField("TimeOutSeconds", env.TIMEOUTSECONDS).Debugf("freezing routine for %v seconds", env.TIMEOUTSECONDS)
+
 					time.Sleep(time.Duration(env.TIMEOUTSECONDS) * time.Second)
 				}
-
 			}()
 		}
 	}
 
-	// kill operator if crd configload fails
-	prtcl.ErrorKill(core.LoadRestClient())
+	http.HandleFunc("/healthz/live", func(w http.ResponseWriter, r *http.Request) {
 
-	// start the actual routine for the operator
-	go func() {
+		env.Log().WithFields(logrus.Fields{
+			"healthz.live":       true,
+			"code":               200,
+			"request.remoteaddr": r.RemoteAddr,
+			"request.protocol":   r.Proto,
+			"request.requesturi": r.RequestURI,
+		}).Trace("health requested: liveness")
 
-		prtcl.Log.Println("beginning resource processing")
-
-		for {
-
-			// calculate globalconfigs
-			for _, gc := range func() v1alpha1.GlobalConfigList {
-
-				prtcl.Log.Println("requesting list of globalsecrets")
-
-				result := v1alpha1.GlobalConfigList{}
-
-				// look up globalconfigs
-				if err := core.CRDCLIENT.Get().Resource("globalconfigs").Do(context.TODO()).Into(&result); err != nil {
-
-					prtcl.Log.Println("error receiving globalconfigs list:", err)
-
-					prtcl.PrintObject(core.CRDCLIENT, result, err)
-				}
-
-				return result
-
-			}().Items {
-
-				handler.CRUD_Configmaps(gc)
-			}
-
-			// calculate globalsecrets
-			for _, gs := range func() v1alpha1.GlobalSecretList {
-
-				prtcl.Log.Println("requesting list of globalsecrets")
-
-				result := v1alpha1.GlobalSecretList{}
-
-				// look up globalsecrets
-				if err := core.CRDCLIENT.Get().Resource("globalsecrets").Do(context.TODO()).Into(&result); err != nil {
-
-					prtcl.Log.Println("error receiving globalsecrets list:", err)
-
-					prtcl.PrintObject(core.CRDCLIENT, result, err)
-				}
-
-				return result
-
-			}().Items {
-
-				handler.CRUD_Secrets(gs)
-			}
-
-			time.Sleep(time.Duration(env.TIMEOUTSECONDS) * time.Second)
-		}
-	}()
-
-	prtcl.Log.Println("initializing healthz-endpoint")
-
-	healthapi := httprdb.CreateApiEndpoint(":80", "release", []httprdb.Route{
-		{
-			Request: "GET",
-			SubPath: "/healthz/live",
-			Handler: func(ctx *gin.Context) {
-				ctx.IndentedJSON(200,
-					struct {
-						Code   int    `json:"code"`
-						Status string `json:"status"`
-					}{
-						Code:   200,
-						Status: "health/live: OK",
-					})
-			},
-		},
+		w.WriteHeader(200)
 	})
 
-	healthapi.Boot()
+	http.HandleFunc("/healthz/ready", func(w http.ResponseWriter, r *http.Request) {
+
+		env.Log().WithFields(logrus.Fields{
+			"healthz.ready":      true,
+			"code":               200,
+			"request.remoteaddr": r.RemoteAddr,
+			"request.protocol":   r.Proto,
+			"request.requesturi": r.RequestURI,
+		}).Trace("health requested: readyness")
+
+		w.WriteHeader(200)
+	})
+
+	if *err = http.ListenAndServe(":80", nil); *err != nil {
+		env.Log().WithField("endpoint", ":80").WithError(*err).Error("http server finished")
+	}
 }

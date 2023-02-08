@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"context"
+
+	"github.com/jnnkrdb/k8s/operator"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -60,4 +63,17 @@ func (in *GlobalSecretList) DeepCopyObject() runtime.Object {
 		}
 	}
 	return &out
+}
+
+// ----------------------------------------------------
+// helper functions
+
+const _GS_RESOURCE string = "globalsecrets"
+
+// requests all deployed GlobalSecrets and returns them as a GlobalSecretList
+func GetGlobalSecretList() (gsl GlobalSecretList, err error) {
+
+	err = operator.CRD().Get().Resource(_GS_RESOURCE).Do(context.TODO()).Into(&gsl)
+
+	return
 }

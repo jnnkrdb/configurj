@@ -1,6 +1,10 @@
 package v1alpha1
 
 import (
+	"context"
+
+	"github.com/jnnkrdb/k8s/operator"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -29,6 +33,7 @@ func (in *GlobalConfig) DeepCopyInto(out *GlobalConfig) {
 
 // ----------------------------------------------------
 // kubernetes dependencies
+
 type GlobalConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -58,4 +63,17 @@ func (in *GlobalConfigList) DeepCopyObject() runtime.Object {
 		}
 	}
 	return &out
+}
+
+// ----------------------------------------------------
+// helper functions
+
+const _GC_RESOURCE string = "globalconfigs"
+
+// requests all deployed GlobalConfigs and returns them as a GlobalConfigList
+func GetGlobalConfigList() (gcl GlobalConfigList, err error) {
+
+	err = operator.CRD().Get().Resource(_GC_RESOURCE).Do(context.TODO()).Into(&gcl)
+
+	return
 }

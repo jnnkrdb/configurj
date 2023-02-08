@@ -3,53 +3,92 @@ package handler
 import (
 	"context"
 
-	"github.com/jnnkrdb/configurj-engine/core"
-	"github.com/jnnkrdb/corerdb/fnc"
-	"github.com/jnnkrdb/corerdb/prtcl"
+	"github.com/jnnkrdb/configurj-engine/env"
+	"github.com/jnnkrdb/k8s/operator"
 
+	"github.com/jnnkrdb/corerdb/fnc"
+	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // receive the namespace lists (all namespaces, avoided via regex, matched via regex)
-func GetNamespaceLists(avoids, matches []string) (_all, _match []string) {
+func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 
-	_all, _match = []string{}, []string{}
+	nslog := env.Log().WithFields(logrus.Fields{
+		"namespaces.avoid": avoids,
+		"namesapces.match": matches,
+	})
 
-	if all_ns, err := core.K8SCLIENT.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); err != nil {
+	nslog.Debug("requesting namespaces")
 
-		prtcl.Log.Println("error while requesting the namespaces:", err)
+	nslog.Trace("allocating storage")
 
-		prtcl.PrintObject(all_ns, err)
+	var (
+		_all   *[]string
+		_match *[]string
+
+		all_ns *v1.NamespaceList
+		err    *error
+	)
+
+	nslog.Trace("requesting namespaces from cluster, parsing into a list")
+
+	if all_ns, *err = operator.K8S().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); *err != nil {
+
+		nslog.WithError(*err).Error("error while requesting the namespaces")
 
 	} else {
 
-		for _, ns := range all_ns.Items {
+		nslog.WithField("namespaces.all", all_ns.Items).Trace("received list of namespaces")
+
+		nslog.Debug("received list of namespaces")
+
+		for id, ns := range all_ns.Items {
+
+			currnslog := nslog.WithFields(logrus.Fields{
+				"list.id":                id,
+				"current.namespace.name": ns.Name,
+				"current.namespace.uid":  ns.UID,
+			})
+
+			currnslog.Trace("checking namespace")
 
 			// add to all-list
-			_all = append(_all, ns.Name)
+			*_all = append(*_all, ns.Name)
 
-			// calculate match list
+			currnslog.WithField("namespaces._all", *_all).Trace("added namespace to collection")
+
 			if len(avoids) > 0 {
 
-				if !fnc.FindStringInRegexpList(ns.Name, avoids) {
+				currnslog.Trace("checking avoided namespaces")
 
-					if fnc.FindStringInRegexpList(ns.Name, matches) {
+				if fnc.FindStringInRegexpList(ns.Name, avoids) {
 
-						_match = append(_match, ns.Name)
-					}
+					currnslog.Trace("found namespace in avoids list -> continue")
+
+					continue
 				}
 
-			} else {
+				currnslog.Trace("no namespaces to avoid")
+			}
 
-				if fnc.FindStringInRegexpList(ns.Name, matches) {
+			currnslog.Trace("checking namespaces to match")
 
-					_match = append(_match, ns.Name)
-				}
+			if fnc.FindStringInRegexpList(ns.Name, matches) {
+
+				*_match = append(*_match, ns.Name)
+
+				currnslog.WithField("namespaces._match", *_match).Trace("added namespace to matches")
 			}
 		}
 	}
 
-	prtcl.PrintObject(_all, _match)
+	nslog.WithFields(logrus.Fields{
+		"namespaces._all":   *_all,
+		"namespaces._match": *_match,
+		"error":             *err,
+	}).Debug("finished namespaces calculation")
 
-	return
+	return *_all, *_match, *err
 }

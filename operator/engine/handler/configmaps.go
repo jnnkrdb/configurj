@@ -3,11 +3,12 @@ package handler
 import (
 	"context"
 
-	"github.com/jnnkrdb/configurj-engine/core"
+	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
 
 	"github.com/jnnkrdb/corerdb/fnc"
-	"github.com/jnnkrdb/corerdb/prtcl"
+	"github.com/jnnkrdb/k8s/operator"
+	"github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,89 +17,161 @@ import (
 // function to create, update and delete configmaps from a globalconfig
 func CRUD_Configmaps(gc v1alpha1.GlobalConfig) {
 
-	prtcl.Log.Println("process globalconfig:", gc.Namespace+"/"+gc.Name)
+	crudlog := env.Log().WithFields(logrus.Fields{
+		"current.globalconfig.name":      gc.Name,
+		"current.globalconfig.namespace": gc.Namespace,
+	})
 
-	prtcl.PrintObject(gc)
+	crudlog.Debug("processing globalconfig")
 
+	var (
+		all_namespaces     *[]string
+		matched_namespaces *[]string
+		err                *error
+	)
+
+	crudlog.WithFields(logrus.Fields{
+		"all_namespaces":     *all_namespaces,
+		"matched_namespaces": *matched_namespaces,
+		"err":                *err,
+	}).Trace("allocated cache for objects")
+
+	crudlog.Debug("requesting namespace lists")
 	// request the namespace lists (all namespaces, avoided via regex, matched via regex)
-	all_namespaces, matched_namespaces := GetNamespaceLists(gc.Spec.Namespaces.AvoidRegex, gc.Spec.Namespaces.MatchRegex)
+	*all_namespaces, *matched_namespaces, *err = GetNamespaceLists(gc.Spec.Namespaces.AvoidRegex, gc.Spec.Namespaces.MatchRegex)
 
-	// build create/delete functions
-	_create := func(namespace string) {
-
-		prtcl.Log.Println("creating configmap", namespace+"/"+gc.Spec.Name)
-
-		var new = v1.ConfigMap{}
-		new.Name = gc.Spec.Name
-		new.Namespace = namespace
-		new.Annotations = func() map[string]string {
-			result := make(map[string]string)
-			result[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
-			return result
-		}()
-		new.Immutable = &gc.Spec.Immutable
-		new.Data = gc.Spec.Data
-
-		if res, err := core.K8SCLIENT.CoreV1().ConfigMaps(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{}); err != nil {
-
-			prtcl.Log.Println("error while creating configmap", new.Namespace+"/"+new.Name+":", err)
-
-			prtcl.PrintObject(new, res, err)
-
-		} else {
-
-			prtcl.Log.Println("configmap created:", res.Namespace+"/"+res.Name)
-
-			prtcl.PrintObject(new)
-		}
-	}
-
-	_delete := func(namespace string) (err error) {
-
-		err = nil
-
-		prtcl.Log.Println("deleting configmap:", namespace+"/"+gc.Spec.Name)
-
-		if err := core.K8SCLIENT.CoreV1().ConfigMaps(namespace).Delete(context.TODO(), gc.Spec.Name, metav1.DeleteOptions{}); err != nil {
-
-			prtcl.Log.Println("error deleting configmap [", namespace+"/"+gc.Spec.Name+"]:", err)
-
-		} else {
-
-			prtcl.Log.Println("deleted configmap:", namespace+"/"+gc.Spec.Name)
-		}
-
-		return
-	}
+	crudlog.WithFields(logrus.Fields{
+		"all_namespaces":     *all_namespaces,
+		"matched_namespaces": *matched_namespaces,
+		"err":                *err,
+	}).Trace("received namespaces lists")
 
 	// DELETE
-	for _, clusternamespace := range all_namespaces {
+	crudlog.Debug("delete non-matching configmaps")
 
-		if !fnc.StringInList(clusternamespace, matched_namespaces) {
+	for _, clusternamespace := range *all_namespaces {
 
-			_delete(clusternamespace)
+		delTrace := crudlog.WithFields(logrus.Fields{
+			"current.namespace":   clusternamespace,
+			"matching.namespaces": *matched_namespaces,
+		})
+
+		delTrace.Trace("checking namespace match")
+
+		if !fnc.StringInList(clusternamespace, *matched_namespaces) {
+
+			delTrace.Trace("namespace does not match with required namespaces")
+
+			_DeleteConfigMap(clusternamespace, gc.Spec.Name)
+
+		} else {
+
+			delTrace.Trace("namespace does match with required namespaces")
 		}
 	}
 
-	for _, matchednamespace := range matched_namespaces {
+	crudlog.Debug("creating/updating matching configmaps")
 
-		if cm, err := core.K8SCLIENT.CoreV1().ConfigMaps(matchednamespace).Get(context.TODO(), gc.Spec.Name, metav1.GetOptions{}); err != nil {
+	for _, matchednamespace := range *matched_namespaces {
 
-			_create(matchednamespace)
+		llog := crudlog.WithField("destination.configmap", matchednamespace+"/"+gc.Spec.Name)
+
+		llog.Trace("checking the existence of the configmap")
+
+		if cm, err := operator.K8S().CoreV1().ConfigMaps(matchednamespace).Get(context.TODO(), gc.Spec.Name, metav1.GetOptions{}); err != nil {
+
+			llog.Trace("configmap does not exist")
+
+			// CREATE
+			_CreateConfigMap(matchednamespace, gc)
 
 		} else {
+
+			llog.Trace("configmap does exist")
+
+			vercomplog := llog.WithFields(logrus.Fields{
+				"configmap.annotation.resourceversion":    cm.Annotations[ANNOTATION_RESOURCEVERSION],
+				"current.globalconfigmap.resourceversion": gc.ResourceVersion,
+			})
+
+			vercomplog.Trace("comparing configmap versions")
 
 			// UPDATE
 			if cm.Annotations[ANNOTATION_RESOURCEVERSION] != gc.ResourceVersion {
 
-				prtcl.Log.Println("updating configmap", cm.Namespace+"/"+cm.Name)
+				vercomplog.Trace("versions do not match, updating configmap")
 
 				// delete the old configmap
-				if _delete(matchednamespace) == nil {
+				if _DeleteConfigMap(matchednamespace, cm.Name) == nil {
 
-					_create(matchednamespace)
+					_CreateConfigMap(matchednamespace, gc)
 				}
 			}
 		}
 	}
+}
+
+// create function for configmaps
+func _CreateConfigMap(namespace string, gc v1alpha1.GlobalConfig) (err error) {
+
+	createlog := env.Log().WithFields(logrus.Fields{
+		"destination.configmap": namespace + "/" + gc.Spec.Name,
+		"source.globalconfig":   gc.Namespace + "/" + gc.Name,
+	})
+
+	createlog.Debug("creating configmap")
+
+	createlog.Trace("initializing new configmap in cache")
+
+	var new v1.ConfigMap
+	new.Name = gc.Spec.Name
+	new.Namespace = namespace
+	new.Annotations = func() map[string]string {
+		result := make(map[string]string)
+		result[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+		return result
+	}()
+	new.Immutable = &gc.Spec.Immutable
+	new.Data = gc.Spec.Data
+
+	createlog.WithField("configmap", new).Trace("initialized new configmap in cache")
+
+	var cm_result *v1.ConfigMap
+
+	cm_result, err = operator.K8S().CoreV1().ConfigMaps(new.Namespace).Create(context.TODO(), &new, metav1.CreateOptions{})
+
+	createlog.WithFields(logrus.Fields{
+		"configmap.cached":         new,
+		"configmap.creationresult": *cm_result,
+	}).Debug("configmaps content")
+
+	if err != nil {
+
+		createlog.WithError(err).Error("error while creating configmap")
+
+	} else {
+
+		createlog.Debug("configmap created")
+	}
+
+	return
+}
+
+// delete function for configmaps
+func _DeleteConfigMap(namespace, name string) (err error) {
+
+	env.Log().WithField("delete.configmap", namespace+"/"+name).Debug("deleting configmap")
+
+	err = operator.K8S().CoreV1().ConfigMaps(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+
+	if err != nil {
+
+		env.Log().WithField("delete.configmap", namespace+"/"+name).WithError(err).Error("error deleting configmap")
+
+	} else {
+
+		env.Log().WithField("delete.configmap", namespace+"/"+name).Trace("deleted configmap")
+	}
+
+	return
 }
