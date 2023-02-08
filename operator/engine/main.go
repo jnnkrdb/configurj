@@ -6,35 +6,68 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jnnkrdb/configurj-engine/core"
+	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/handler"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
+	"github.com/sirupsen/logrus"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jnnkrdb/corerdb/prtcl"
 	"github.com/jnnkrdb/httprdb"
+	"github.com/jnnkrdb/k8s/operator"
 )
 
 var (
-	TimeOutMin float64 = 3
-	Debugging  bool    = false
+	Debugging bool = false
 )
 
 func main() {
+
+	env.Log().WithFields(logrus.Fields{
+		"supported-versions": []string{
+			"globalsecrets." + v1alpha1.GroupName + "/" + v1alpha1.GroupVersion,
+			"globalconfigs." + v1alpha1.GroupName + "/" + v1alpha1.GroupVersion,
+		},
+	}).Print("initializing configurj")
 
 	// initialize the env configs
 	if debug, err := strconv.ParseBool(os.Getenv("DEBUGGING")); err == nil {
 		Debugging = debug
 	}
 
-	if tom, err := strconv.ParseFloat(os.Getenv("TIMEOUTMINUTES"), 64); err == nil {
-		TimeOutMin = tom
-	}
-
 	// activate logging
 	prtcl.SetDebugging(Debugging)
 
-	prtcl.Log.Println("successfully initialized globals.jnnkrdb.de-operator")
+	var err error
+	if err = operator.InitK8sOperatorClient(); err != nil {
+
+		env.Log().WithError(err).Error("error while initializing base kubernetes operator")
+
+	} else {
+
+		env.Log().Debug("successfully initialized base kubernetes operator")
+
+		if err = operator.InitCRDOperatorRestClient(v1alpha1.GroupName, v1alpha1.GroupVersion, v1alpha1.AddToScheme); err != nil {
+
+			env.Log().WithError(err).Error("error while initializing crds kubernetes operator")
+
+		} else {
+
+			env.Log().Debug("successfully initialized crds kubernetes operator")
+
+			go func() {
+
+				env.Log().WithField("TimeOutSeconds", env.TIMEOUTSECONDS).Debug("starting routine for resource processing")
+
+				for {
+
+					time.Sleep(time.Duration(env.TIMEOUTSECONDS) * time.Second)
+				}
+
+			}()
+		}
+	}
 
 	// kill operator if crd configload fails
 	prtcl.ErrorKill(core.LoadRestClient())
@@ -90,7 +123,7 @@ func main() {
 				handler.CRUD_Secrets(gs)
 			}
 
-			time.Sleep(time.Duration(TimeOutMin) * time.Minute)
+			time.Sleep(time.Duration(env.TIMEOUTSECONDS) * time.Second)
 		}
 	}()
 
