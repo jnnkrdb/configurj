@@ -19,8 +19,8 @@ var (
 
 	// lists of the resources
 
-	gcList *v1alpha1.GlobalConfigList
-	gsList *v1alpha1.GlobalSecretList
+	gcList v1alpha1.GlobalConfigList
+	gsList v1alpha1.GlobalSecretList
 )
 
 func main() {
@@ -60,7 +60,7 @@ func main() {
 
 					env.Log().Debug("requesting list of globalconfigs")
 
-					if *gcList, err = v1alpha1.GetGlobalConfigList(); err != nil {
+					if gcList, err = v1alpha1.GetGlobalConfigList(); err != nil {
 
 						env.Log().WithError(err).Error("error receiving list of globalconfigs")
 
@@ -78,11 +78,11 @@ func main() {
 
 					// empty list and free storage
 					env.Log().Trace("delete cached globalconfigs list")
-					*gcList = v1alpha1.GlobalConfigList{}
+					gcList = v1alpha1.GlobalConfigList{}
 
 					env.Log().Trace("requesting list of globalsecrets")
 
-					if *gsList, err = v1alpha1.GetGlobalSecretList(); err != nil {
+					if gsList, err = v1alpha1.GetGlobalSecretList(); err != nil {
 
 						env.Log().WithError(err).Error("error receiving list of globalsecrets")
 
@@ -100,7 +100,7 @@ func main() {
 
 					// empty list and free storage
 					env.Log().Trace("delete cached globalsecrets list")
-					*gsList = v1alpha1.GlobalSecretList{}
+					gsList = v1alpha1.GlobalSecretList{}
 
 					env.Log().WithField("TimeOutSeconds", env.TIMEOUTSECONDS).Debugf("freezing routine for %v seconds", env.TIMEOUTSECONDS)
 
