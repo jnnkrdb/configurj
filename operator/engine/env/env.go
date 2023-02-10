@@ -3,6 +3,7 @@ package env
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -19,20 +20,20 @@ var (
 
 	// receive the timeout seconds from the environmentvariables
 	LOGLEVEL logrus.Level = func() logrus.Level {
-		switch os.Getenv("LOGLEVEL") {
-		case "Trace":
+		switch strings.ToLower(os.Getenv("LOGLEVEL")) {
+		case "trace":
 			return logrus.TraceLevel
-		case "Debug":
+		case "debug":
 			return logrus.DebugLevel
-		case "Info":
+		case "info":
 			return logrus.InfoLevel
-		case "Warn":
+		case "warn":
 			return logrus.WarnLevel
-		case "Error":
+		case "error":
 			return logrus.ErrorLevel
-		case "Fatal":
+		case "fatal":
 			return logrus.FatalLevel
-		case "Panic":
+		case "panic":
 			return logrus.PanicLevel
 		}
 		return logrus.WarnLevel
@@ -42,9 +43,19 @@ var (
 // initialize the log provider -> logrus
 var _log *logrus.Logger = func() *logrus.Logger {
 
-	var l *logrus.Logger = &logrus.Logger{}
+	var l *logrus.Logger = &logrus.Logger{
+		Out:          os.Stdout,
+		Level:        LOGLEVEL,
+		Formatter:    &logrus.JSONFormatter{},
+		ReportCaller: true,
+	}
 
-	l.SetLevel(LOGLEVEL)
+	l.Debug("logger initialized")
+
+	l.WithFields(logrus.Fields{
+		"env.TIMEOUTSECONDS": TIMEOUTSECONDS,
+		"env.LOGLEVEL":       LOGLEVEL,
+	}).Info("environment variables processed")
 
 	return l
 }()

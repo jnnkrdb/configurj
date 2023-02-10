@@ -15,7 +15,7 @@ import (
 var (
 
 	// cached error
-	err *error = nil
+	err error = nil
 
 	// lists of the resources
 
@@ -32,17 +32,17 @@ func main() {
 		},
 	}).Print("initializing configurj")
 
-	if *err = operator.InitK8sOperatorClient(); *err != nil {
+	if err = operator.InitK8sOperatorClient(); err != nil {
 
-		env.Log().WithError(*err).Error("error while initializing base kubernetes operator")
+		env.Log().WithError(err).Error("error while initializing base kubernetes operator")
 
 	} else {
 
 		env.Log().Debug("successfully initialized base kubernetes operator")
 
-		if *err = operator.InitCRDOperatorRestClient(v1alpha1.GroupName, v1alpha1.GroupVersion, v1alpha1.AddToScheme); *err != nil {
+		if err = operator.InitCRDOperatorRestClient(v1alpha1.GroupName, v1alpha1.GroupVersion, v1alpha1.AddToScheme); err != nil {
 
-			env.Log().WithError(*err).Error("error while initializing crds kubernetes operator")
+			env.Log().WithError(err).Error("error while initializing crds kubernetes operator")
 
 		} else {
 
@@ -60,9 +60,9 @@ func main() {
 
 					env.Log().Debug("requesting list of globalconfigs")
 
-					if *gcList, *err = v1alpha1.GetGlobalConfigList(); *err != nil {
+					if *gcList, err = v1alpha1.GetGlobalConfigList(); err != nil {
 
-						env.Log().WithError(*err).Error("error receiving list of globalconfigs")
+						env.Log().WithError(err).Error("error receiving list of globalconfigs")
 
 					} else {
 
@@ -82,9 +82,9 @@ func main() {
 
 					env.Log().Trace("requesting list of globalsecrets")
 
-					if *gsList, *err = v1alpha1.GetGlobalSecretList(); *err != nil {
+					if *gsList, err = v1alpha1.GetGlobalSecretList(); err != nil {
 
-						env.Log().WithError(*err).Error("error receiving list of globalsecrets")
+						env.Log().WithError(err).Error("error receiving list of globalsecrets")
 
 					} else {
 
@@ -136,7 +136,7 @@ func main() {
 		w.WriteHeader(200)
 	})
 
-	if *err = http.ListenAndServe(":80", nil); *err != nil {
-		env.Log().WithField("endpoint", ":80").WithError(*err).Error("http server finished")
+	if err = http.ListenAndServe(":80", nil); err != nil {
+		env.Log().WithField("endpoint", ":80").WithError(err).Error("http server finished")
 	}
 }
