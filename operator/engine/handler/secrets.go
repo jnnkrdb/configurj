@@ -169,15 +169,24 @@ func _DeleteSecret(namespace, name string) (err error) {
 
 	env.Log().WithField("delete.secret", namespace+"/"+name).Debug("deleting secret")
 
-	err = operator.K8S().CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	var scrt *v1.Secret
 
-	if err != nil {
+	if scrt, err = operator.K8S().CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{}); err != nil {
 
-		env.Log().WithField("delete.secret", namespace+"/"+name).WithError(err).Error("error deleting secret")
+		env.Log().WithField("delete.secret", namespace+"/"+name).Trace("secret does not exist")
 
 	} else {
 
-		env.Log().WithField("delete.secret", namespace+"/"+name).Trace("deleted secret")
+		err = operator.K8S().CoreV1().Secrets(scrt.Namespace).Delete(context.TODO(), scrt.Name, metav1.DeleteOptions{})
+
+		if err != nil {
+
+			env.Log().WithField("delete.secret", scrt.Namespace+"/"+scrt.Name).WithError(err).Error("error deleting secret")
+
+		} else {
+
+			env.Log().WithField("delete.secret", scrt.Namespace+"/"+scrt.Name).Trace("deleted secret")
+		}
 	}
 
 	return
