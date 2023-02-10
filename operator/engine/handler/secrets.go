@@ -25,40 +25,40 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 	crudlog.Debug("processing globalconfig")
 
 	var (
-		all_namespaces     *[]string
-		matched_namespaces *[]string
-		err                *error
+		all_namespaces     []string
+		matched_namespaces []string
+		err                error
 	)
 
 	crudlog.WithFields(logrus.Fields{
-		"all_namespaces":     *all_namespaces,
-		"matched_namespaces": *matched_namespaces,
-		"err":                *err,
+		"all_namespaces":     all_namespaces,
+		"matched_namespaces": matched_namespaces,
+		"err":                err,
 	}).Trace("allocated cache for objects")
 
 	crudlog.Debug("requesting namespace lists")
 	// request the namespace lists (all namespaces, avoided via regex, matched via regex)
-	*all_namespaces, *matched_namespaces, *err = GetNamespaceLists(gs.Spec.Namespaces.AvoidRegex, gs.Spec.Namespaces.MatchRegex)
+	all_namespaces, matched_namespaces, err = GetNamespaceLists(gs.Spec.Namespaces.AvoidRegex, gs.Spec.Namespaces.MatchRegex)
 
 	crudlog.WithFields(logrus.Fields{
-		"all_namespaces":     *all_namespaces,
-		"matched_namespaces": *matched_namespaces,
-		"err":                *err,
+		"all_namespaces":     all_namespaces,
+		"matched_namespaces": matched_namespaces,
+		"err":                err,
 	}).Trace("received namespaces lists")
 
 	// DELETE
 	crudlog.Debug("delete non-matching secrets")
 
-	for _, clusternamespace := range *all_namespaces {
+	for _, clusternamespace := range all_namespaces {
 
 		delTrace := crudlog.WithFields(logrus.Fields{
 			"current.namespace":   clusternamespace,
-			"matching.namespaces": *matched_namespaces,
+			"matching.namespaces": matched_namespaces,
 		})
 
 		delTrace.Trace("checking namespace match")
 
-		if !fnc.StringInList(clusternamespace, *matched_namespaces) {
+		if !fnc.StringInList(clusternamespace, matched_namespaces) {
 
 			delTrace.Trace("namespace does not match with required namespaces")
 
@@ -72,7 +72,7 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 
 	crudlog.Debug("creating/updating matching secrets")
 
-	for _, matchednamespace := range *matched_namespaces {
+	for _, matchednamespace := range matched_namespaces {
 
 		llog := crudlog.WithField("destination.secret", matchednamespace+"/"+gs.Spec.Name)
 

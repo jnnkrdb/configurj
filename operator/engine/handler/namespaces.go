@@ -25,18 +25,18 @@ func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 	nslog.Trace("allocating storage")
 
 	var (
-		_all   *[]string
-		_match *[]string
+		_all   []string
+		_match []string
 
 		all_ns *v1.NamespaceList
-		err    *error
+		err    error
 	)
 
 	nslog.Trace("requesting namespaces from cluster, parsing into a list")
 
-	if all_ns, *err = operator.K8S().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); *err != nil {
+	if all_ns, err = operator.K8S().CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{}); err != nil {
 
-		nslog.WithError(*err).Error("error while requesting the namespaces")
+		nslog.WithError(err).Error("error while requesting the namespaces")
 
 	} else {
 
@@ -55,9 +55,9 @@ func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 			currnslog.Trace("checking namespace")
 
 			// add to all-list
-			*_all = append(*_all, ns.Name)
+			_all = append(_all, ns.Name)
 
-			currnslog.WithField("namespaces._all", *_all).Trace("added namespace to collection")
+			currnslog.WithField("namespaces._all", _all).Trace("added namespace to collection")
 
 			if len(avoids) > 0 {
 
@@ -77,18 +77,18 @@ func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 
 			if fnc.FindStringInRegexpList(ns.Name, matches) {
 
-				*_match = append(*_match, ns.Name)
+				_match = append(_match, ns.Name)
 
-				currnslog.WithField("namespaces._match", *_match).Trace("added namespace to matches")
+				currnslog.WithField("namespaces._match", _match).Trace("added namespace to matches")
 			}
 		}
 	}
 
 	nslog.WithFields(logrus.Fields{
-		"namespaces._all":   *_all,
-		"namespaces._match": *_match,
-		"error":             *err,
+		"namespaces._all":   _all,
+		"namespaces._match": _match,
+		"error":             err,
 	}).Debug("finished namespaces calculation")
 
-	return *_all, *_match, *err
+	return _all, _match, err
 }
