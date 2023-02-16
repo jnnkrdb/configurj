@@ -2,11 +2,11 @@ package handler
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
 
-	"github.com/jnnkrdb/corerdb/fnc"
 	"github.com/jnnkrdb/k8s/operator"
 	"github.com/sirupsen/logrus"
 
@@ -58,7 +58,7 @@ func CRUD_Secrets(gs v1alpha1.GlobalSecret) {
 
 		delTrace.Trace("checking namespace match")
 
-		if !fnc.StringInList(clusternamespace, matched_namespaces) {
+		if !StringInList(clusternamespace, matched_namespaces) {
 
 			delTrace.Trace("namespace does not match with required namespaces")
 
@@ -124,21 +124,40 @@ func _CreateSecret(namespace string, gs v1alpha1.GlobalSecret) (err error) {
 	createlog.Trace("initializing new secret in cache")
 
 	var new = v1.Secret{}
+
 	new.Name = gs.Spec.Name
+
 	new.Namespace = namespace
+
 	new.Annotations = func() map[string]string {
+
 		result := make(map[string]string)
+
 		result[ANNOTATION_RESOURCEVERSION] = gs.ResourceVersion
+
 		return result
 	}()
+
 	new.Immutable = &gs.Spec.Immutable
+
 	new.StringData = func() map[string]string {
+
 		result := make(map[string]string)
+
 		for k, v := range gs.Spec.Data {
-			result[k] = fnc.UnencodeB64(v)
+
+			if unenc, err := base64.StdEncoding.DecodeString(v); err == nil {
+
+				result[k] = string(unenc)
+
+			} else {
+
+				createlog.WithError(err).Error("error parsing string from base64")
+			}
 		}
 		return result
 	}()
+
 	new.Type = v1.SecretType(gs.Spec.Type)
 
 	createlog.WithField("secret", new).Trace("initialized new secret in cache")

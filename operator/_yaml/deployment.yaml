@@ -24,10 +24,10 @@ spec:
         image: docker.io/jnnkrdb/configurj-engine:latest
         imagePullPolicy: Always
         env:
-          - name: DEBUGGING
-            value: "true"
-          - name: TIMEOUTMINUTES
-            value: "3"
+          - name: LOGLEVEL
+            value: "trace" # see in operator/engine/env/env.go -> LOGLEVEL
+          - name: TIMEOUTSECONDS
+            value: "30"
         resources:
           limits:
             memory: "128Mi"
@@ -40,5 +40,12 @@ spec:
           periodSeconds: 5
           httpGet:
             path: /healthz/live
+            port: 80
+          failureThreshold: 5
+        readynessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          httpGet:
+            path: /healthz/ready
             port: 80
           failureThreshold: 5

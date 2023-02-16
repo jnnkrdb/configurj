@@ -6,7 +6,6 @@ import (
 	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/configurj-engine/int/v1alpha1"
 
-	"github.com/jnnkrdb/corerdb/fnc"
 	"github.com/jnnkrdb/k8s/operator"
 	"github.com/sirupsen/logrus"
 
@@ -58,7 +57,7 @@ func CRUD_Configmaps(gc v1alpha1.GlobalConfig) {
 
 		delTrace.Trace("checking namespace match")
 
-		if !fnc.StringInList(clusternamespace, matched_namespaces) {
+		if !StringInList(clusternamespace, matched_namespaces) {
 
 			delTrace.Trace("namespace does not match with required namespaces")
 
@@ -124,14 +123,22 @@ func _CreateConfigMap(namespace string, gc v1alpha1.GlobalConfig) (err error) {
 	createlog.Trace("initializing new configmap in cache")
 
 	var new v1.ConfigMap
+
 	new.Name = gc.Spec.Name
+
 	new.Namespace = namespace
+
 	new.Annotations = func() map[string]string {
+
 		result := make(map[string]string)
+
 		result[ANNOTATION_RESOURCEVERSION] = gc.ResourceVersion
+
 		return result
 	}()
+
 	new.Immutable = &gc.Spec.Immutable
+
 	new.Data = gc.Spec.Data
 
 	createlog.WithField("configmap", new).Trace("initialized new configmap in cache")

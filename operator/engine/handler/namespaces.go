@@ -6,7 +6,6 @@ import (
 	"github.com/jnnkrdb/configurj-engine/env"
 	"github.com/jnnkrdb/k8s/operator"
 
-	"github.com/jnnkrdb/corerdb/fnc"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +62,7 @@ func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 
 				currnslog.Trace("checking avoided namespaces")
 
-				if fnc.FindStringInRegexpList(ns.Name, avoids) {
+				if res, err := FindStringInRegexpList(ns.Name, avoids); res && err == nil {
 
 					currnslog.Trace("found namespace in avoids list -> continue")
 
@@ -75,7 +74,7 @@ func GetNamespaceLists(avoids, matches []string) ([]string, []string, error) {
 
 			currnslog.Trace("checking namespaces to match")
 
-			if fnc.FindStringInRegexpList(ns.Name, matches) {
+			if res, err := FindStringInRegexpList(ns.Name, matches); res && err == nil {
 
 				_match = append(_match, ns.Name)
 
