@@ -264,10 +264,10 @@ spec:
         image: docker.io/jnnkrdb/configurj-engine:latest
         imagePullPolicy: Always
         env:
-          - name: DEBUGGING
-            value: "true"
-          - name: TIMEOUTMINUTES
-            value: "3"
+          - name: LOGLEVEL
+            value: "trace" # see in operator/engine/env/env.go -> LOGLEVEL
+          - name: TIMEOUTSECONDS
+            value: "30"
         resources:
           limits:
             memory: "128Mi"
@@ -280,6 +280,13 @@ spec:
           periodSeconds: 5
           httpGet:
             path: /healthz/live
+            port: 80
+          failureThreshold: 5
+        readynessProbe:
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          httpGet:
+            path: /healthz/ready
             port: 80
           failureThreshold: 5
 ```
@@ -353,8 +360,8 @@ The Operator package must be configured for each controller seperatly.
 
 #### Operator Environment Variables
 
-- `DEBUGGING` (+Optional): This env-variable configures the print output to the controller-commandline. If set to `"true"`, more detailed objects will be printed and not only the error-messages. The default is: `false`
-- `TIMEOUTMINUTES` (+Optional): This variable sets the await timeout of the routine in minutes. Its soure code counterpart is an float64 type. The default is: `3` minutes.
+- `LOGLEVEL` (+Optional): This env-variable configures the print output to the controller-commandline. There are 7 modes available: `trace`, `debug`, `info`, `warn`, `error`, `fatal` and `panic`. From first value to the last value, the log-output is more detailed. The default is: `warn`
+- `TIMEOUTSECONDS` (+Optional): This variable sets the await timeout of the routine in seconds. The default is: `30` seconds.
 
 #### UI-Controller Angular Config
 
